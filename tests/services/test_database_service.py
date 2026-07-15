@@ -15,7 +15,7 @@ def test_run_migrations_creates_users_table():
 
     with container.database.connect() as conn:
         row = conn.execute("SELECT version FROM schema_version").fetchone()
-        assert row["version"] == 1
+        assert row["version"] == 2
 
         conn.execute("INSERT INTO users (id, created_at) VALUES ('u1', 'now')")
         result = conn.execute("SELECT id, created_at FROM users WHERE id = 'u1'").fetchone()
@@ -30,7 +30,7 @@ def test_run_migrations_is_idempotent():
 
     with container.database.connect() as conn:
         row = conn.execute("SELECT version FROM schema_version").fetchone()
-        assert row["version"] == 1
+        assert row["version"] == 2
 
 
 def test_validate_versions_rejects_non_contiguous_versions():

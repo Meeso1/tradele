@@ -1,13 +1,9 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
 
 from app.dependencies import UserServiceDep
+from app.dtos.user_dtos import CreateUserResponse
 
 router = APIRouter(prefix="/users", tags=["users"])
-
-
-class CreateUserResponse(BaseModel):
-    id: str
 
 
 @router.post("", response_model=CreateUserResponse, status_code=201)

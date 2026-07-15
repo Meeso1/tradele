@@ -1,18 +1,9 @@
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
 
 from app.dependencies import AuthServiceDep, UserServiceDep
+from app.dtos.auth_dtos import IssueTokenRequest, IssueTokenResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-class IssueTokenRequest(BaseModel):
-    user_id: str
-
-
-class IssueTokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
 
 
 @router.post("/token", response_model=IssueTokenResponse)
