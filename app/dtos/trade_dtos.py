@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from app.repositories.trade_repository import ExecutedTrade, RequestedTrade, Side
+from app.repositories.trade_repository import ActiveTrade, HistoricalTrade, Side
 
 
 class TradeInput(BaseModel):
@@ -26,5 +26,5 @@ class SubmitTradesResponse(BaseModel):
 
 
 class TradesResponse(BaseModel):
-    requested: list[RequestedTrade]
-    executed: list[ExecutedTrade]
+    requested: list[ActiveTrade]
+    closed: list[HistoricalTrade]

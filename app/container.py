@@ -17,7 +17,7 @@ from app.services.logger_service import LoggerService
 from app.services.market_data_service import MarketDataService
 from app.services.portfolio_service import PortfolioService
 from app.services.settings_service import SettingsService
-from app.services.trade_service import TradeService
+from app.services.trade_submission_service import TradeSubmissionService
 from app.services.user_service import UserService
 
 
@@ -50,7 +50,7 @@ class Container:
         self.portfolios: PortfolioService = PortfolioService(
             self.portfolio_repository, self.logger.get_logger("PortfolioService")
         )
-        self.trades: TradeService = TradeService(
+        self.trades: TradeSubmissionService = TradeSubmissionService(
             self.trade_repository, self.logger.get_logger("TradeService")
         )
 

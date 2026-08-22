@@ -39,10 +39,6 @@ class PortfolioService:
         return portfolio
 
     def save(self, user_id: str, portfolio: Portfolio) -> None:
-        """Persist an updated portfolio (e.g. after trades execute).
-
-        TODO: not called anywhere yet - wire this up once trade execution
-        actually updates holdings/cash. See `TradeService`.
-        """
+        """Persist an updated portfolio (e.g. after trades execute)."""
         self._portfolio_repository.update(user_id, portfolio)
         self._logger.info("Saved portfolio for user %s", user_id)

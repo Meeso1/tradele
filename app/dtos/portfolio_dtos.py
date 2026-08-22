@@ -7,4 +7,4 @@ from pydantic import BaseModel
 
 class PortfolioResponse(BaseModel):
     cash: float
-    holdings: dict[str, int]
+    holdings: dict[str, float]

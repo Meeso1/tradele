@@ -18,24 +18,24 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 from pydantic import BaseModel
 
 from app.repositories.trade_repository import (
-    ExecutedTrade,
-    RequestedTrade,
+    ActiveTrade,
+    HistoricalTrade,
     Side,
     TradeRepository,
 )
-from app.services.market_data_service import TRADABLE_SYMBOLS
+from app.services.market_data_service import TRADABLE_SYMBOLS, HourlyDate
 
-__all__ = [
-    "ExecutedTrade",
-    "RequestedTrade",
+__all__ = [ # TODO: don't do that - use normal imports
+    "ActiveTrade",
+    "HistoricalTrade",
     "Side",
     "TradeRequest",
-    "TradeService",
+    "TradeSubmissionService",
     "TradeValidationError",
     "TradesAlreadySubmittedError",
 ]
@@ -55,7 +55,7 @@ class TradeRequest(BaseModel):
     quantity: int
 
 
-class TradeService:
+class TradeSubmissionService:
     def __init__(self, trade_repository: TradeRepository, logger: logging.Logger) -> None:
         self._trade_repository: TradeRepository = trade_repository
         self._logger: logging.Logger = logger
@@ -78,50 +78,37 @@ class TradeService:
         # trades execute against the next day's (unknown) prices - they
         # probably belong in the (not yet written) execution step instead.
 
-    def has_submitted_today(self, user_id: str) -> bool:
-        today = date.today().isoformat()
-        return self._trade_repository.exists_for_date(user_id, today)
+    def has_submitted_today(self, user_id: str, date: HourlyDate) -> bool:
+        return self._trade_repository.exists_for_date(user_id, date.day.isoformat())
 
-    def submit(self, user_id: str, trades: list[TradeRequest]) -> list[str]:
-        """Record a player's one-per-day batch of trade requests.
+    def submit(self, user_id: str, trades: list[TradeRequest], date: HourlyDate) -> list[str]:
+        """
+        Validate and save to db a daily batch of trade requests for a given user.
 
         Raises `TradeValidationError` if the trades are invalid, or
         `TradesAlreadySubmittedError` if the player has already submitted
         trades today.
         """
         self._validate(trades)
-        if self.has_submitted_today(user_id):
-            raise TradesAlreadySubmittedError("Trades already submitted for today")
+        if self.has_submitted_today(user_id, date):
+            raise TradesAlreadySubmittedError(f"Trades already submitted for {date.day.isoformat()}")
 
-        today = date.today().isoformat()
-        now = datetime.now(UTC).isoformat()
+        now = datetime.now(UTC)
         trade_ids: list[str] = []
         for trade in trades:
             trade_id = str(uuid.uuid4())
             trade_ids.append(trade_id)
             self._trade_repository.insert_requested(
-                trade_id, user_id, trade.symbol, trade.side, trade.quantity, now, today
+                ActiveTrade(
+                    id=trade_id,
+                    user_id=user_id,
+                    symbol=trade.symbol,
+                    side=trade.side,
+                    quantity=trade.quantity,
+                    requested_at=now,
+                    trade_date=date.day.isoformat(),
+                    active_from_hour=date.hour,
+                )
             )
-        self._logger.info("Recorded %d requested trade(s) for user %s", len(trade_ids), user_id)
+        self._logger.info("Recorded %d requested trade(s) for user %s, active from %d:00 %s", len(trade_ids), user_id, date.hour, date.day.isoformat())
         return trade_ids
-
-    def list_requested(self, user_id: str) -> list[RequestedTrade]:
-        return self._trade_repository.list_requested(user_id)
-
-    def list_executed(self, user_id: str) -> list[ExecutedTrade]:
-        return self._trade_repository.list_executed(user_id)
-
-    def record_executed(
-        self, user_id: str, symbol: str, side: Side, quantity: int, price: float
-    ) -> str:
-        """Record a trade that actually happened.
-
-        TODO: not called anywhere yet - this is here for the (not yet
-        written) daily execution job to use once requested trades are
-        actually matched against prices.
-        """
-        trade_id = str(uuid.uuid4())
-        now = datetime.now(UTC).isoformat()
-        self._trade_repository.insert_executed(trade_id, user_id, symbol, side, quantity, price, now)
-        self._logger.info("Recorded executed trade %s for user %s", trade_id, user_id)
-        return trade_id

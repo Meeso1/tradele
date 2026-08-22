@@ -1,10 +1,11 @@
-"""Data access and row/model mapping for the `requested_trades` and
-`executed_trades` tables.
+"""Data access and row/model mapping for the `active_trades` and
+`historical_trades` tables.
 """
 
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel
@@ -12,27 +13,36 @@ from pydantic import BaseModel
 from app.services.database_service import DatabaseService
 
 Side = Literal["buy", "sell"]
+InactiveTradeStatus = Literal["executed", "cancelled"]
 
 
-class RequestedTrade(BaseModel):
+class ActiveTrade(BaseModel):
+    """
+    Trade that is active and will attempt to be executed 
+    against every subsequent hour window.
+    """
     id: str
     user_id: str
     symbol: str
     side: Side
-    quantity: int
-    requested_at: str
-    trade_date: str
-    status: str
+    quantity: float
+    requested_at: datetime # Real time at which the trade was requested
+    trade_date: str # Day for which the trade was requested (since users can request one set per day)
+    active_from_hour: int # Hour of the day when the trade is active. After being posted, the trade starts being active from the next full hour.
 
 
-class ExecutedTrade(BaseModel):
+class HistoricalTrade(BaseModel):
+    """
+    Trade is no longer active - due to being executed, cancelled, etc.
+    """
     id: str
     user_id: str
     symbol: str
     side: Side
-    quantity: int
-    price: float
-    executed_at: str
+    quantity: float
+    price: float | None # Price at which the trade was executed, or None if it wasn't executed
+    closed_at: str # Real time at which the trade was closed (due to execution, cancellation, etc.)
+    status: InactiveTradeStatus # Status of the trade after it has been closed
 
 
 class TradeRepository:
@@ -46,63 +56,45 @@ class TradeRepository:
     def exists_for_date(self, user_id: str, trade_date: str) -> bool:
         with self._database.connect() as conn:
             row = conn.execute(
-                "SELECT 1 FROM requested_trades WHERE user_id = ? AND trade_date = ?",
+                "SELECT 1 FROM active_trades WHERE user_id = ? AND trade_date = ?",
                 (user_id, trade_date),
             ).fetchone()
         return row is not None
 
-    def insert_requested(
-        self,
-        trade_id: str,
-        user_id: str,
-        symbol: str,
-        side: Side,
-        quantity: int,
-        requested_at: str,
-        trade_date: str,
-    ) -> None:
+    def insert_requested(self, trade: ActiveTrade) -> None:
         with self._database.connect() as conn:
             conn.execute(
                 """
-                INSERT INTO requested_trades
+                INSERT INTO active_trades
                     (id, user_id, symbol, side, quantity, requested_at, trade_date, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
                 """,
-                (trade_id, user_id, symbol, side, quantity, requested_at, trade_date),
+                (trade.id, trade.user_id, trade.symbol, trade.side, trade.quantity, trade.requested_at, trade.trade_date),
             )
 
-    def list_requested(self, user_id: str) -> list[RequestedTrade]:
+    def list_requested(self, user_id: str) -> list[ActiveTrade]:
         with self._database.connect() as conn:
             rows = conn.execute(
-                "SELECT * FROM requested_trades WHERE user_id = ? ORDER BY requested_at",
+                "SELECT * FROM active_trades WHERE user_id = ? ORDER BY requested_at",
                 (user_id,),
             ).fetchall()
-        return [RequestedTrade(**dict(row)) for row in rows]
+        return [ActiveTrade(**dict(row)) for row in rows]
 
-    def list_executed(self, user_id: str) -> list[ExecutedTrade]:
+    def list_executed(self, user_id: str) -> list[HistoricalTrade]:
         with self._database.connect() as conn:
             rows = conn.execute(
-                "SELECT * FROM executed_trades WHERE user_id = ? ORDER BY executed_at",
+                "SELECT * FROM historical_trades WHERE user_id = ? ORDER BY closed_at",
                 (user_id,),
             ).fetchall()
-        return [ExecutedTrade(**dict(row)) for row in rows]
+        return [HistoricalTrade(**dict(row)) for row in rows]
 
-    def insert_executed(
-        self,
-        trade_id: str,
-        user_id: str,
-        symbol: str,
-        side: Side,
-        quantity: int,
-        price: float,
-        executed_at: str,
-    ) -> None:
+    def insert_executed(self, trade: HistoricalTrade) -> None:
         with self._database.connect() as conn:
             conn.execute(
                 """
-                INSERT INTO executed_trades
-                    (id, user_id, symbol, side, quantity, price, executed_at)
+                INSERT INTO historical_trades
+                    (id, user_id, symbol, side, quantity, price, closed_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                (trade_id, user_id, symbol, side, quantity, price, executed_at),
+                (trade.id, trade.user_id, trade.symbol, trade.side, trade.quantity, trade.price, trade.closed_at),
             )

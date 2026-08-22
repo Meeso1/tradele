@@ -14,6 +14,7 @@ applies any that are newer than the database's current version, in order.
 from __future__ import annotations
 
 import importlib
+import itertools
 import logging
 import pkgutil
 import sqlite3
@@ -78,7 +79,7 @@ class DatabaseService:
             return
         if versions[0] != 1:
             raise RuntimeError("Migrations must start at version 1")
-        for previous, current in zip(versions, versions[1:]):
+        for previous, current in itertools.pairwise(versions):
             if current != previous + 1:
                 message = f"Non-contiguous migration versions: jump from {previous} to {current}"
                 raise RuntimeError(message)

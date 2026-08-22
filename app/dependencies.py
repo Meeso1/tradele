@@ -12,11 +12,16 @@ from typing import Annotated
 from fastapi import Depends
 
 from app.container import container
+from app.repositories.trade_repository import TradeRepository
 from app.services.auth_service import AuthService
 from app.services.market_data_service import MarketDataService
 from app.services.portfolio_service import PortfolioService
-from app.services.trade_service import TradeService
+from app.services.trade_submission_service import TradeSubmissionService
 from app.services.user_service import UserService
+
+
+def get_trade_repository() -> TradeRepository:
+    return container.trade_repository
 
 
 def get_user_service() -> UserService:
@@ -35,12 +40,14 @@ def get_portfolio_service() -> PortfolioService:
     return container.portfolios
 
 
-def get_trade_service() -> TradeService:
+def get_trade_service() -> TradeSubmissionService:
     return container.trades
 
+
+TradeRepositoryDep = Annotated[TradeRepository, Depends(get_trade_repository)]
 
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 MarketDataServiceDep = Annotated[MarketDataService, Depends(get_market_data_service)]
 PortfolioServiceDep = Annotated[PortfolioService, Depends(get_portfolio_service)]
-TradeServiceDep = Annotated[TradeService, Depends(get_trade_service)]
+TradeServiceDep = Annotated[TradeSubmissionService, Depends(get_trade_service)]

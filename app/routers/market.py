@@ -1,8 +1,10 @@
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter
 
 from app.dependencies import MarketDataServiceDep
 from app.dtos.market_dtos import PricesResponse
-from app.services.market_data_service import TRADABLE_SYMBOLS
+from app.services.market_data_service import TRADABLE_SYMBOLS, HourlyDate
 
 router = APIRouter(prefix="/market", tags=["market"])
 
@@ -15,10 +17,8 @@ def get_symbols() -> list[str]:
 
 @router.get("/prices", response_model=PricesResponse)
 def get_prices(market_data_service: MarketDataServiceDep) -> PricesResponse:
-    """Return mock current prices for every tradable symbol.
+    """Return mock current prices for every tradable symbol."""
+    # TODO: add timezone to settings and replace all `datetime.now()` calls with some mini-service that provides timezone-aware timestamps
+    return PricesResponse(prices=market_data_service.get_prices(HourlyDate.containing(datetime.now() - timedelta(hours=1))))
 
-    TODO: these are randomly generated (see `MarketDataService`) - swap in
-    a real price feed, and likely snapshot prices once per day instead of
-    regenerating them on every request.
-    """
-    return PricesResponse(prices=market_data_service.get_prices())
+# TODO: Some historical prices endpoint for plots etc.

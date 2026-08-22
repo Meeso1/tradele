@@ -17,7 +17,7 @@ from app.services.database_service import DatabaseService
 
 class Portfolio(BaseModel):
     cash: float
-    holdings: dict[str, int]
+    holdings: dict[str, float]
 
 
 class PortfolioRepository:

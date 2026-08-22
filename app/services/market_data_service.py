@@ -8,8 +8,11 @@ a real feed.
 
 from __future__ import annotations
 
+from datetime import date, datetime
 import logging
 import random
+
+from pydantic.dataclasses import dataclass
 
 # The set of tokens players can trade, plus cash (handled separately by
 # `PortfolioService`). This list is intentionally fixed for now.
@@ -27,13 +30,34 @@ _BASE_PRICES: dict[str, float] = {
 }
 
 
-class MarketDataService:
-    """Provides current prices for the fixed set of tradable symbols.
+@dataclass
+class HourlyDate:
+    day: date
+    hour: int
 
-    TODO: prices should probably be snapshotted once per day (rather than
-    randomized on every call) so "today's price" is stable while players
-    are deciding on trades, and "tomorrow's price" is what their requested
-    trades actually execute against.
+    @staticmethod
+    def containing(timestamp: datetime) -> HourlyDate:
+        return HourlyDate(day=timestamp.date(), hour=timestamp.hour)
+
+
+@dataclass
+class HourlyPriceData:
+    symbol: str
+    open: float
+    high: float
+    low: float
+    close: float
+    starting_hour: HourlyDate
+
+
+class MarketDataService:
+    """
+    Provides current prices for the fixed set of tradable symbols.
+    The most important information is hourly high/low/open/close data - 
+    this will be used to simulate trades (trade is executed against the 
+    hourly data starting from the next hour after it is posted).
+
+    TODO: Return real market data instead of mock prices.
     """
 
     def __init__(self, logger: logging.Logger) -> None:
@@ -42,18 +66,9 @@ class MarketDataService:
     def configure(self, logger: logging.Logger) -> None:
         self._logger = logger
 
-    def get_price(self, symbol: str) -> float:
-        """Return a mock current price for `symbol`.
-
-        Raises `ValueError` if `symbol` isn't tradable.
-        """
-        if symbol not in _BASE_PRICES:
-            raise ValueError(f"Unknown symbol: {symbol}")
-        base = _BASE_PRICES[symbol]
-        # +/- 5% random walk around the anchor price, just to have
-        # *something* that varies from call to call.
-        return round(random.uniform(base * 0.95, base * 1.05), 2)
-
-    def get_prices(self) -> dict[str, float]:
-        """Return mock current prices for every tradable symbol."""
-        return {symbol: self.get_price(symbol) for symbol in TRADABLE_SYMBOLS}
+    def get_prices(self, time: HourlyDate) -> dict[str, float]:
+        """Return mock prices for all symbols for (time, time + 1 hour) window."""
+        return {
+            symbol: round(random.uniform(base * 0.95, base * 1.05), 2)
+            for symbol, base in _BASE_PRICES.items()
+        }

@@ -1,7 +1,7 @@
 import pytest
 
 from app.container import container
-from app.services.trade_service import (
+from app.services.trade_submission_service import (
     TradeRequest,
     TradesAlreadySubmittedError,
     TradeValidationError,
