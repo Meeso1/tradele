@@ -1,22 +1,18 @@
-import pytest
+from datetime import date, datetime
 
 from app.container import container
-from app.services.market_data_service import TRADABLE_SYMBOLS
-
-
-def test_get_price_returns_a_positive_price_for_a_known_symbol():
-    price = container.market_data.get_price(TRADABLE_SYMBOLS[0])
-
-    assert price > 0
-
-
-def test_get_price_raises_for_an_unknown_symbol():
-    with pytest.raises(ValueError):
-        container.market_data.get_price("NOT-A-SYMBOL")
+from app.services.market_data_service import TRADABLE_SYMBOLS, HourlyDate
 
 
 def test_get_prices_returns_a_price_for_every_tradable_symbol():
-    prices = container.market_data.get_prices()
+    prices = container.market_data.get_prices(HourlyDate(day=date(2024, 1, 1), hour=10))
 
     assert set(prices.keys()) == set(TRADABLE_SYMBOLS)
     assert all(price > 0 for price in prices.values())
+
+
+def test_hourly_date_containing_extracts_day_and_hour():
+    hourly_date = HourlyDate.containing(datetime(2024, 1, 1, 10, 30))
+
+    assert hourly_date.day == date(2024, 1, 1)
+    assert hourly_date.hour == 10

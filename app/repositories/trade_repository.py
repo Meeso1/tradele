@@ -66,10 +66,19 @@ class TradeRepository:
             conn.execute(
                 """
                 INSERT INTO active_trades
-                    (id, user_id, symbol, side, quantity, requested_at, trade_date, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+                    (id, user_id, symbol, side, quantity, requested_at, trade_date, active_from_hour, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
                 """,
-                (trade.id, trade.user_id, trade.symbol, trade.side, trade.quantity, trade.requested_at, trade.trade_date),
+                (
+                    trade.id,
+                    trade.user_id,
+                    trade.symbol,
+                    trade.side,
+                    trade.quantity,
+                    trade.requested_at.isoformat(),
+                    trade.trade_date,
+                    trade.active_from_hour,
+                ),
             )
 
     def list_requested(self, user_id: str) -> list[ActiveTrade]:
@@ -93,8 +102,17 @@ class TradeRepository:
             conn.execute(
                 """
                 INSERT INTO historical_trades
-                    (id, user_id, symbol, side, quantity, price, closed_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                    (id, user_id, symbol, side, quantity, price, closed_at, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (trade.id, trade.user_id, trade.symbol, trade.side, trade.quantity, trade.price, trade.closed_at),
+                (
+                    trade.id,
+                    trade.user_id,
+                    trade.symbol,
+                    trade.side,
+                    trade.quantity,
+                    trade.price,
+                    trade.closed_at,
+                    trade.status,
+                ),
             )

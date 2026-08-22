@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from app.container import container
 from app.main import app
+from app.repositories.trade_repository import HistoricalTrade
 
 client = TestClient(app)
 
@@ -17,7 +18,7 @@ def test_submit_trades_records_requested_trades():
     assert response.status_code == 201
     trade_ids = response.json()["trade_ids"]
     assert len(trade_ids) == 1
-    assert len(container.trades.list_requested(user_id)) == 1
+    assert len(container.trade_repository.list_requested(user_id)) == 1
 
 
 def test_submit_trades_returns_404_for_an_unknown_user():
@@ -61,20 +62,31 @@ def test_submit_trades_returns_409_when_already_submitted_today():
     assert response.status_code == 409
 
 
-def test_get_trades_returns_requested_and_executed_trades():
+def test_get_trades_returns_requested_and_closed_trades():
     user_id = container.users.create()
     client.post(
         "/trades",
         json={"user_id": user_id, "trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]},
     )
-    container.trades.record_executed(user_id, symbol="AAPL", side="buy", quantity=1, price=190.0)
+    container.trade_repository.insert_executed(
+        HistoricalTrade(
+            id="e1",
+            user_id=user_id,
+            symbol="AAPL",
+            side="buy",
+            quantity=1,
+            price=190.0,
+            closed_at="2024-01-02T00:00:00",
+            status="executed",
+        )
+    )
 
     response = client.get("/trades", params={"user_id": user_id})
 
     assert response.status_code == 200
     body = response.json()
     assert len(body["requested"]) == 1
-    assert len(body["executed"]) == 1
+    assert len(body["closed"]) == 1
 
 
 def test_get_trades_returns_404_for_an_unknown_user():
