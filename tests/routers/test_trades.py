@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from fastapi.testclient import TestClient
 
 from app.container import container
@@ -7,12 +9,13 @@ from app.repositories.trade_repository import HistoricalTrade
 client = TestClient(app)
 
 
-def test_submit_trades_records_requested_trades():
+def test_submit_trades_records_requested_trades(auth_headers: Callable[[str], dict[str, str]]):
     user_id = container.users.create()
 
     response = client.post(
         "/trades",
-        json={"user_id": user_id, "trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]},
+        json={"trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]},
+        headers=auth_headers(user_id),
     )
 
     assert response.status_code == 201
@@ -21,52 +24,69 @@ def test_submit_trades_records_requested_trades():
     assert len(container.trade_repository.list_requested(user_id)) == 1
 
 
-def test_submit_trades_returns_404_for_an_unknown_user():
+def test_submit_trades_returns_404_for_an_unknown_user(
+    auth_headers: Callable[[str], dict[str, str]],
+):
     response = client.post(
         "/trades",
-        json={
-            "user_id": "does-not-exist",
-            "trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}],
-        },
+        json={"trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]},
+        headers=auth_headers("does-not-exist"),
     )
 
     assert response.status_code == 404
 
 
-def test_submit_trades_returns_400_for_an_unknown_symbol():
+def test_submit_trades_returns_400_for_an_unknown_symbol(
+    auth_headers: Callable[[str], dict[str, str]],
+):
     user_id = container.users.create()
 
     response = client.post(
         "/trades",
-        json={
-            "user_id": user_id,
-            "trades": [{"symbol": "NOT-A-SYMBOL", "side": "buy", "quantity": 1}],
-        },
+        json={"trades": [{"symbol": "NOT-A-SYMBOL", "side": "buy", "quantity": 1}]},
+        headers=auth_headers(user_id),
     )
 
     assert response.status_code == 400
 
 
-def test_submit_trades_returns_409_when_already_submitted_today():
+def test_submit_trades_returns_409_when_already_submitted_today(
+    auth_headers: Callable[[str], dict[str, str]],
+):
     user_id = container.users.create()
+    headers = auth_headers(user_id)
     client.post(
         "/trades",
-        json={"user_id": user_id, "trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]},
+        json={"trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]},
+        headers=headers,
     )
 
     response = client.post(
         "/trades",
-        json={"user_id": user_id, "trades": [{"symbol": "MSFT", "side": "buy", "quantity": 1}]},
+        json={"trades": [{"symbol": "MSFT", "side": "buy", "quantity": 1}]},
+        headers=headers,
     )
 
     assert response.status_code == 409
 
 
-def test_get_trades_returns_requested_and_closed_trades():
+def test_submit_trades_requires_authentication():
+    response = client.post(
+        "/trades", json={"trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]}
+    )
+
+    assert response.status_code == 401
+
+
+def test_get_trades_returns_requested_and_closed_trades(
+    auth_headers: Callable[[str], dict[str, str]],
+):
     user_id = container.users.create()
+    headers = auth_headers(user_id)
     client.post(
         "/trades",
-        json={"user_id": user_id, "trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]},
+        json={"trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]},
+        headers=headers,
     )
     container.trade_repository.insert_executed(
         HistoricalTrade(
@@ -81,7 +101,7 @@ def test_get_trades_returns_requested_and_closed_trades():
         )
     )
 
-    response = client.get("/trades", params={"user_id": user_id})
+    response = client.get("/trades", headers=headers)
 
     assert response.status_code == 200
     body = response.json()
@@ -89,7 +109,13 @@ def test_get_trades_returns_requested_and_closed_trades():
     assert len(body["closed"]) == 1
 
 
-def test_get_trades_returns_404_for_an_unknown_user():
-    response = client.get("/trades", params={"user_id": "does-not-exist"})
+def test_get_trades_returns_404_for_an_unknown_user(auth_headers: Callable[[str], dict[str, str]]):
+    response = client.get("/trades", headers=auth_headers("does-not-exist"))
 
     assert response.status_code == 404
+
+
+def test_get_trades_requires_authentication():
+    response = client.get("/trades")
+
+    assert response.status_code == 401

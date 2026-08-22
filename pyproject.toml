@@ -21,6 +21,18 @@ dev = [
 [tool.ruff]
 line-length = 100
 
+[tool.ruff.lint]
+# DTZ (flake8-datetimez): forbid naive datetime/date construction (e.g.
+# `datetime.now()`, `date.today()`) so timestamps are always UTC and
+# timezone-aware. See AGENTS.md - the app should use `datetime.now(UTC)`
+# everywhere instead.
+extend-select = ["DTZ"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests construct fixed, naive dates/times as plain input fixtures rather
+# than real "current time" values, so the DTZ rules don't apply there.
+"tests/**" = ["DTZ"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

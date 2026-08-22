@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -18,3 +19,19 @@ def isolated_runtime_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
 
     container.reset()
     container.database.run_migrations()
+
+
+@pytest.fixture
+def auth_headers() -> Callable[[str], dict[str, str]]:
+    """Return a factory for `Authorization` headers carrying a valid access
+    token for the given user ID, for use against endpoints protected by
+    `AuthContextDep`.
+    """
+
+    def _auth_headers(user_id: str) -> dict[str, str]:
+        from app.container import container
+
+        token = container.auth.create_access_token(user_id)
+        return {"Authorization": f"Bearer {token}"}
+
+    return _auth_headers

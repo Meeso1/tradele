@@ -14,10 +14,6 @@ class TradeInput(BaseModel):
 
 
 class SubmitTradesRequest(BaseModel):
-    # TODO: `user_id` should come from an authenticated session instead of
-    # the request body, once there's a dependency that extracts it from
-    # the access token issued by `/auth/token` (see `app/routers/auth.py`).
-    user_id: str
     trades: list[TradeInput]
 
 

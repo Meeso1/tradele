@@ -53,6 +53,19 @@ trading.
   (e.g. `user_service: UserServiceDep`) rather than a `Depends(...)` default value. This keeps
   `Depends(...)` calls in one place and lets tests override the underlying function via
   `app.dependency_overrides` if needed.
+- Don't use `__all__` in modules just to control/shorten what other modules can import from them
+  (e.g. to make a re-export look intentional). Import the thing directly from the module that
+  actually defines it instead. `__all__` is fine if there's a genuine reason unrelated to import
+  ergonomics (e.g. controlling `from module import *`), but that's rare in this codebase.
+- Endpoints are protected (require a valid access token) by default. A route is only allowed to
+  be anonymous if it fundamentally can't require auth yet (e.g. `POST /users`, which creates the
+  account, or `POST /auth/token`, which issues the token in the first place) - new routes should
+  default to being protected unless there's a similarly fundamental reason not to be. To protect
+  a whole router, pass `dependencies=[Depends(get_auth_context)]` to its `APIRouter(...)` (see
+  `app/routers/portfolio.py` or `app/routers/trades.py`); routes that also need to know *who's*
+  calling should additionally depend on `AuthContextDep` (from `app/dependencies.py`) to get the
+  caller's `user_id` (and, potentially, other claims later) - FastAPI caches the underlying
+  dependency per request, so this doesn't verify the token twice.
 - For database access and migrations, see the `database-migrations` skill.
 - Tests run against a per-test temp DB/keys/log directory (see `tests/conftest.py`), which
   requires calling `container.reset()` after changing env vars via `monkeypatch`, since

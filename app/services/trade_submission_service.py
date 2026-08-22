@@ -22,23 +22,8 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel
 
-from app.repositories.trade_repository import (
-    ActiveTrade,
-    HistoricalTrade,
-    Side,
-    TradeRepository,
-)
+from app.repositories.trade_repository import ActiveTrade, Side, TradeRepository
 from app.services.market_data_service import TRADABLE_SYMBOLS, HourlyDate
-
-__all__ = [ # TODO: don't do that - use normal imports
-    "ActiveTrade",
-    "HistoricalTrade",
-    "Side",
-    "TradeRequest",
-    "TradeSubmissionService",
-    "TradeValidationError",
-    "TradesAlreadySubmittedError",
-]
 
 
 class TradeValidationError(ValueError):
