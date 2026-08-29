@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
+from app.services.market_data_service import HourlyPriceData
+
 
 class PricesResponse(BaseModel):
-    prices: dict[str, float]
+    prices: dict[str, HourlyPriceData]

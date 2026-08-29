@@ -19,6 +19,7 @@ def get_symbols() -> list[str]:
 def get_prices(market_data_service: MarketDataServiceDep) -> PricesResponse:
     """Return mock current prices for every tradable symbol."""
     now = datetime.now(UTC)
-    return PricesResponse(prices=market_data_service.get_prices(HourlyDate.containing(now - timedelta(hours=1))))
+    market_state = market_data_service.get_prices(HourlyDate.containing(now - timedelta(hours=1)))
+    return PricesResponse(prices=market_state.prices)
 
 # TODO: Some historical prices endpoint for plots etc.

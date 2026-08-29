@@ -1,10 +1,3 @@
-"""Data access for the `users` table.
-
-This repository only wraps raw SQL and row/model mapping - it has no
-business logic (e.g. generating IDs/timestamps), which belongs in
-`UserService` instead.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -31,3 +24,8 @@ class UserRepository:
         with self._database.connect() as conn:
             row = conn.execute("SELECT 1 FROM users WHERE id = ?", (user_id,)).fetchone()
         return row is not None
+
+    def list_all_user_ids(self) -> list[str]:
+        with self._database.connect() as conn:
+            rows = conn.execute("SELECT id FROM users").fetchall()
+        return [row["id"] for row in rows]

@@ -1,4 +1,3 @@
-from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -32,10 +31,15 @@ def submit_trades(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     trade_requests = [
-        TradeRequest(symbol=trade.symbol, side=trade.side, quantity=trade.quantity)
+        TradeRequest(
+            symbol=trade.symbol,
+            kind=trade.kind,
+            quantity=trade.quantity,
+            requested_price=trade.requested_price,
+        )
         for trade in request.trades
     ]
-    date = HourlyDate.containing(datetime.now(UTC) + timedelta(hours=1))
+    date = HourlyDate.current()
 
     try:
         trade_ids = trade_service.submit(auth_context.user_id, trade_requests, date)

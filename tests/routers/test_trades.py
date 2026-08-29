@@ -1,10 +1,11 @@
 from collections.abc import Callable
+from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
 from app.container import container
 from app.main import app
-from app.repositories.trade_repository import HistoricalTrade
+from app.services.market_data_service import HourlyDate
 
 client = TestClient(app)
 
@@ -14,7 +15,11 @@ def test_submit_trades_records_requested_trades(auth_headers: Callable[[str], di
 
     response = client.post(
         "/trades",
-        json={"trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]},
+        json={
+            "trades": [
+                {"symbol": "AAPL", "kind": "limit_buy", "quantity": 1, "requested_price": 190.0}
+            ]
+        },
         headers=auth_headers(user_id),
     )
 
@@ -29,7 +34,11 @@ def test_submit_trades_returns_404_for_an_unknown_user(
 ):
     response = client.post(
         "/trades",
-        json={"trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]},
+        json={
+            "trades": [
+                {"symbol": "AAPL", "kind": "limit_buy", "quantity": 1, "requested_price": 190.0}
+            ]
+        },
         headers=auth_headers("does-not-exist"),
     )
 
@@ -43,7 +52,16 @@ def test_submit_trades_returns_400_for_an_unknown_symbol(
 
     response = client.post(
         "/trades",
-        json={"trades": [{"symbol": "NOT-A-SYMBOL", "side": "buy", "quantity": 1}]},
+        json={
+            "trades": [
+                {
+                    "symbol": "NOT-A-SYMBOL",
+                    "kind": "limit_buy",
+                    "quantity": 1,
+                    "requested_price": 1.0,
+                }
+            ]
+        },
         headers=auth_headers(user_id),
     )
 
@@ -57,13 +75,21 @@ def test_submit_trades_returns_409_when_already_submitted_today(
     headers = auth_headers(user_id)
     client.post(
         "/trades",
-        json={"trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]},
+        json={
+            "trades": [
+                {"symbol": "AAPL", "kind": "limit_buy", "quantity": 1, "requested_price": 190.0}
+            ]
+        },
         headers=headers,
     )
 
     response = client.post(
         "/trades",
-        json={"trades": [{"symbol": "MSFT", "side": "buy", "quantity": 1}]},
+        json={
+            "trades": [
+                {"symbol": "MSFT", "kind": "limit_buy", "quantity": 1, "requested_price": 420.0}
+            ]
+        },
         headers=headers,
     )
 
@@ -72,7 +98,12 @@ def test_submit_trades_returns_409_when_already_submitted_today(
 
 def test_submit_trades_requires_authentication():
     response = client.post(
-        "/trades", json={"trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]}
+        "/trades",
+        json={
+            "trades": [
+                {"symbol": "AAPL", "kind": "limit_buy", "quantity": 1, "requested_price": 190.0}
+            ]
+        },
     )
 
     assert response.status_code == 401
@@ -83,22 +114,23 @@ def test_get_trades_returns_requested_and_closed_trades(
 ):
     user_id = container.users.create()
     headers = auth_headers(user_id)
-    client.post(
+    submit_response = client.post(
         "/trades",
-        json={"trades": [{"symbol": "AAPL", "side": "buy", "quantity": 1}]},
+        json={
+            "trades": [
+                {"symbol": "AAPL", "kind": "limit_buy", "quantity": 1, "requested_price": 190.0},
+                {"symbol": "MSFT", "kind": "limit_buy", "quantity": 1, "requested_price": 420.0},
+            ]
+        },
         headers=headers,
     )
-    container.trade_repository.insert_executed(
-        HistoricalTrade(
-            id="e1",
-            user_id=user_id,
-            symbol="AAPL",
-            side="buy",
-            quantity=1,
-            price=190.0,
-            closed_at="2024-01-02T00:00:00",
-            status="executed",
-        )
+    trade_id_to_close = submit_response.json()["trade_ids"][0]
+    container.trade_repository.move_to_executed(
+        trade_id_to_close,
+        190.0,
+        datetime.now(UTC),
+        HourlyDate.current(),
+        "executed",
     )
 
     response = client.get("/trades", headers=headers)

@@ -27,3 +27,7 @@ class UserService:
 
     def exists(self, user_id: str) -> bool:
         return self._user_repository.exists(user_id)
+
+    def list_ids(self) -> list[str]:
+        """Return the IDs of every registered user."""
+        return self._user_repository.list_all_user_ids()

@@ -20,10 +20,50 @@ import pkgutil
 import sqlite3
 from collections.abc import Generator
 from contextlib import contextmanager
+from types import TracebackType
 
 from app.services.settings_service import SettingsService
 
 MIGRATIONS_PACKAGE = "app.migrations"
+
+
+class DbTransaction:
+    """Groups several repository calls into one atomic SQL transaction.
+
+    Obtained via `DatabaseService.transaction()` and used as a context
+    manager. While active, `DatabaseService.connect()` - including calls
+    made indirectly by repositories - transparently returns this
+    transaction's connection instead of opening a new one, so repository
+    calls made anywhere inside the `with` block join the same transaction
+    without a connection having to be passed to them explicitly.
+
+    Relies on `DatabaseService` being used as a singleton (one instance per
+    process, via `container.database`) - the active connection is tracked
+    as a plain attribute on it rather than anything concurrency-aware.
+    """
+
+    def __init__(self, database: DatabaseService, conn: sqlite3.Connection) -> None:
+        self._database: DatabaseService = database
+        self._conn: sqlite3.Connection = conn
+
+    def __enter__(self) -> DbTransaction:
+        self._database._active_connection = self._conn  # pyright: ignore[reportPrivateUsage]
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        try:
+            if exc_type is None:
+                self._conn.commit()
+            else:
+                self._conn.rollback()
+        finally:
+            self._database._active_connection = None  # pyright: ignore[reportPrivateUsage]
+            self._conn.close()
 
 
 class DatabaseService:
@@ -31,6 +71,7 @@ class DatabaseService:
         self._settings: SettingsService = settings
         self._logger: logging.Logger = logger
         self._migrations: dict[int, str] = {}
+        self._active_connection: sqlite3.Connection | None = None
 
     def configure(self, settings: SettingsService, logger: logging.Logger) -> None:
         """Point this service at (possibly new) settings/logger.
@@ -53,12 +94,28 @@ class DatabaseService:
             raise ValueError(f"Duplicate migration version: {version}")
         self._migrations[version] = sql
 
+    def transaction(self) -> DbTransaction:
+        """Start a transaction spanning multiple repository calls.
+
+        Use as a context manager: `with database.transaction(): ...`.
+        Everything run inside the block - including via repositories -
+        shares one connection and commits or rolls back atomically.
+        """
+        return DbTransaction(self, self._new_connection())
+
     @contextmanager
     def connect(self) -> Generator[sqlite3.Connection]:
-        """Open a connection, commit on success, and roll back on error."""
-        conn = sqlite3.connect(self._settings.db_path)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
+        """Open a connection, commit on success, and roll back on error.
+
+        If a `transaction()` is currently active, returns its connection
+        instead of opening a new one, leaving committing/rolling
+        back/closing it to that transaction.
+        """
+        if self._active_connection is not None:
+            yield self._active_connection
+            return
+
+        conn = self._new_connection()
         try:
             yield conn
             conn.commit()
@@ -67,6 +124,12 @@ class DatabaseService:
             raise
         finally:
             conn.close()
+
+    def _new_connection(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self._settings.db_path)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
 
     def _load_migrations(self) -> None:
         """Import every module under `app/migrations` so they self-register."""

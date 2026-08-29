@@ -8,6 +8,8 @@ is wired together.
 
 from __future__ import annotations
 
+from app.jobs.job_scheduler import JobScheduler
+from app.jobs.trade_execution_job import TradeExecutionJob
 from app.repositories.portfolio_repository import PortfolioRepository
 from app.repositories.trade_repository import TradeRepository
 from app.repositories.user_repository import UserRepository
@@ -17,6 +19,7 @@ from app.services.logger_service import LoggerService
 from app.services.market_data_service import MarketDataService
 from app.services.portfolio_service import PortfolioService
 from app.services.settings_service import SettingsService
+from app.services.trade_execution_service import TradeExecutionService
 from app.services.trade_submission_service import TradeSubmissionService
 from app.services.user_service import UserService
 
@@ -53,6 +56,17 @@ class Container:
         self.trades: TradeSubmissionService = TradeSubmissionService(
             self.trade_repository, self.logger.get_logger("TradeService")
         )
+        self.trade_execution: TradeExecutionService = TradeExecutionService(
+            self.logger.get_logger("TradeExecutionService"),
+            self.trade_repository,
+            self.market_data,
+            self.portfolio_repository,
+            self.users,
+            self.database,
+        )
+
+        self.job_scheduler: JobScheduler = JobScheduler(self.logger.get_logger("JobScheduler"))
+        self.job_scheduler.register(TradeExecutionJob(self.trade_execution))
 
     def reset(self) -> None:
         """Re-resolve settings/logging from the environment and propagate them.
@@ -78,6 +92,7 @@ class Container:
         self.market_data.configure(self.logger.get_logger("MarketDataService"))
         self.portfolios.configure(self.logger.get_logger("PortfolioService"))
         self.trades.configure(self.logger.get_logger("TradeService"))
+        self.trade_execution.configure(self.logger.get_logger("TradeExecutionService"))
 
 
 container = Container()

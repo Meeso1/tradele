@@ -10,7 +10,11 @@ from app.routers import auth, health, market, portfolio, trades, users
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     container.database.run_migrations()
-    yield
+    container.job_scheduler.start()
+    try:
+        yield
+    finally:
+        await container.job_scheduler.stop()
 
 
 app = FastAPI(

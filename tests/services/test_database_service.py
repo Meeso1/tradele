@@ -15,7 +15,7 @@ def test_run_migrations_creates_users_table():
 
     with container.database.connect() as conn:
         row = conn.execute("SELECT version FROM schema_version").fetchone()
-        assert row["version"] == 3
+        assert row["version"] == 4
 
         conn.execute("INSERT INTO users (id, created_at) VALUES ('u1', 'now')")
         result = conn.execute("SELECT id, created_at FROM users WHERE id = 'u1'").fetchone()
@@ -30,7 +30,7 @@ def test_run_migrations_is_idempotent():
 
     with container.database.connect() as conn:
         row = conn.execute("SELECT version FROM schema_version").fetchone()
-        assert row["version"] == 3
+        assert row["version"] == 4
 
 
 def test_validate_versions_rejects_non_contiguous_versions():
@@ -50,3 +50,44 @@ def test_add_migration_rejects_duplicate_versions():
     database.add_migration(1, "SELECT 1;")
     with pytest.raises(ValueError, match="Duplicate"):
         database.add_migration(1, "SELECT 1;")
+
+
+def test_connect_reuses_the_connection_of_an_active_transaction():
+    from app.container import container
+
+    with container.database.transaction():
+        with container.database.connect() as conn:
+            conn.execute("INSERT INTO users (id, created_at) VALUES ('u1', 'now')")
+
+        # A second `connect()` call inside the same transaction should see
+        # the not-yet-committed insert above, since it reuses the same
+        # connection rather than opening a fresh one.
+        with container.database.connect() as conn:
+            row = conn.execute("SELECT id FROM users WHERE id = 'u1'").fetchone()
+            assert row["id"] == "u1"
+
+
+def test_transaction_commits_changes_made_through_connect():
+    from app.container import container
+
+    with container.database.transaction():
+        with container.database.connect() as conn:
+            conn.execute("INSERT INTO users (id, created_at) VALUES ('u1', 'now')")
+
+    with container.database.connect() as conn:
+        row = conn.execute("SELECT id FROM users WHERE id = 'u1'").fetchone()
+    assert row["id"] == "u1"
+
+
+def test_transaction_rolls_back_all_changes_on_error():
+    from app.container import container
+
+    with pytest.raises(ValueError, match="boom"):
+        with container.database.transaction():
+            with container.database.connect() as conn:
+                conn.execute("INSERT INTO users (id, created_at) VALUES ('u1', 'now')")
+            raise ValueError("boom")
+
+    with container.database.connect() as conn:
+        row = conn.execute("SELECT id FROM users WHERE id = 'u1'").fetchone()
+    assert row is None

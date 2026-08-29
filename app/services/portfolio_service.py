@@ -10,10 +10,6 @@ from __future__ import annotations
 import logging
 
 from app.repositories.portfolio_repository import Portfolio, PortfolioRepository
-from app.services.market_data_service import TRADABLE_SYMBOLS
-
-# TODO: revisit the starting amount once game balance/design is settled.
-STARTING_CASH: float = 100_000.0
 
 
 class PortfolioService:
@@ -24,19 +20,9 @@ class PortfolioService:
     def configure(self, logger: logging.Logger) -> None:
         self._logger = logger
 
-    def _default_portfolio(self) -> Portfolio:
-        return Portfolio(cash=STARTING_CASH, holdings={symbol: 0 for symbol in TRADABLE_SYMBOLS})
-
     def get_or_create(self, user_id: str) -> Portfolio:
         """Return the player's portfolio, creating a fresh one if needed."""
-        portfolio = self._portfolio_repository.get(user_id)
-        if portfolio is not None:
-            return portfolio
-
-        portfolio = self._default_portfolio()
-        self._portfolio_repository.insert(user_id, portfolio)
-        self._logger.info("Created portfolio for user %s", user_id)
-        return portfolio
+        return self._portfolio_repository.get_or_create(user_id)
 
     def save(self, user_id: str, portfolio: Portfolio) -> None:
         """Persist an updated portfolio (e.g. after trades execute)."""

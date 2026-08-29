@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from app.repositories.trade_repository import ActiveTrade, HistoricalTrade, Side
+from app.repositories.trade_repository import ActiveTrade, HistoricalTrade, Kind
 
 
 class TradeInput(BaseModel):
     symbol: str
-    side: Side
-    quantity: int = Field(gt=0)
+    kind: Kind
+    quantity: float = Field(gt=0.001)
+    requested_price: float = Field(gt=0)
 
 
 class SubmitTradesRequest(BaseModel):

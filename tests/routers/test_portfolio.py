@@ -4,8 +4,8 @@ from fastapi.testclient import TestClient
 
 from app.container import container
 from app.main import app
+from app.repositories.portfolio_repository import STARTING_CASH
 from app.services.market_data_service import TRADABLE_SYMBOLS
-from app.services.portfolio_service import STARTING_CASH
 
 client = TestClient(app)
 

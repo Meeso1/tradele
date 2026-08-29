@@ -1,19 +1,3 @@
-"""Business logic for player trades, backed by `TradeRepository`.
-
-Players submit one batch of trade requests per day. A daily job is meant
-to execute those requests against the next day's prices and update the
-player's portfolio accordingly - this service currently only handles the
-"request" side of that flow: validating and recording what a player asked
-to happen.
-
-TODO: there's no execution step yet. Requested trades sit with
-status='pending' forever - we need a daily job that reads pending
-requests, matches them against `MarketDataService` prices, updates
-`PortfolioService` holdings/cash (via `PortfolioService.save`), and writes
-a row per executed trade via `record_executed` below (and marks the
-request itself as no longer pending).
-"""
-
 from __future__ import annotations
 
 import logging
@@ -22,7 +6,7 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel
 
-from app.repositories.trade_repository import ActiveTrade, Side, TradeRepository
+from app.repositories.trade_repository import ActiveTrade, Kind, TradeRepository
 from app.services.market_data_service import TRADABLE_SYMBOLS, HourlyDate
 
 
@@ -36,8 +20,9 @@ class TradesAlreadySubmittedError(ValueError):
 
 class TradeRequest(BaseModel):
     symbol: str
-    side: Side
-    quantity: int
+    kind: Kind
+    quantity: float
+    requested_price: float
 
 
 class TradeSubmissionService:
@@ -49,6 +34,7 @@ class TradeSubmissionService:
         self._logger = logger
 
     def _validate(self, trades: list[TradeRequest]) -> None:
+        # We intentionally  don't validate if trade can be executed - other trades executed earlier can change the portfolio state.
         if not trades:
             raise TradeValidationError("Must submit at least one trade")
         for trade in trades:
@@ -56,15 +42,9 @@ class TradeSubmissionService:
                 raise TradeValidationError(f"Unknown symbol: {trade.symbol}")
             if trade.quantity <= 0:
                 raise TradeValidationError("Quantity must be positive")
-        # TODO: this is intentionally minimal for now ("really simple" per
-        # the initial scaffold) - it doesn't check that the player can
-        # actually afford a buy, or that they hold enough shares to sell.
-        # Those checks are tricky to do *at request time* anyway, since
-        # trades execute against the next day's (unknown) prices - they
-        # probably belong in the (not yet written) execution step instead.
 
     def has_submitted_today(self, user_id: str, date: HourlyDate) -> bool:
-        return self._trade_repository.exists_for_date(user_id, date.day.isoformat())
+        return self._trade_repository.exists_for_date(user_id, date)
 
     def submit(self, user_id: str, trades: list[TradeRequest], date: HourlyDate) -> list[str]:
         """
@@ -78,6 +58,7 @@ class TradeSubmissionService:
         if self.has_submitted_today(user_id, date):
             raise TradesAlreadySubmittedError(f"Trades already submitted for {date.day.isoformat()}")
 
+        active_from = HourlyDate.next(date)
         now = datetime.now(UTC)
         trade_ids: list[str] = []
         for trade in trades:
@@ -88,12 +69,12 @@ class TradeSubmissionService:
                     id=trade_id,
                     user_id=user_id,
                     symbol=trade.symbol,
-                    side=trade.side,
+                    kind=trade.kind,
+                    requested_price=trade.requested_price,
                     quantity=trade.quantity,
                     requested_at=now,
-                    trade_date=date.day.isoformat(),
-                    active_from_hour=date.hour,
+                    active_from=active_from,
                 )
             )
-        self._logger.info("Recorded %d requested trade(s) for user %s, active from %d:00 %s", len(trade_ids), user_id, date.hour, date.day.isoformat())
+        self._logger.info("Recorded %d requested trade(s) for user %s, active from %s", len(trade_ids), user_id, active_from)
         return trade_ids

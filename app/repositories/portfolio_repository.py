@@ -1,10 +1,3 @@
-"""Data access and row/model mapping for the `portfolios` table.
-
-A player's portfolio (cash + share holdings) is stored as a single JSON
-blob per user, rather than normalized columns/rows, since it's always read
-and written as a whole and there's no need to query into it from SQL yet.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -13,11 +6,16 @@ from datetime import UTC, datetime
 from pydantic import BaseModel
 
 from app.services.database_service import DatabaseService
+from app.services.market_data_service import TRADABLE_SYMBOLS, HourlyDate
+
+
+STARTING_CASH: float = 100_000.0
 
 
 class Portfolio(BaseModel):
     cash: float
     holdings: dict[str, float]
+    last_hourly_update: HourlyDate | None
 
 
 class PortfolioRepository:
@@ -50,3 +48,20 @@ class PortfolioRepository:
                 "UPDATE portfolios SET data = ?, updated_at = ? WHERE user_id = ?",
                 (portfolio.model_dump_json(), datetime.now(UTC).isoformat(), user_id),
             )
+
+    def get_or_create(self, user_id: str) -> Portfolio:
+        portfolio = self.get(user_id)
+        if portfolio is not None:
+            return portfolio
+    
+        portfolio = self._default_portfolio()
+        self.insert(user_id, portfolio)
+        self._logger.info("Created portfolio for user %s", user_id)
+        return portfolio
+
+    def _default_portfolio(self) -> Portfolio:
+        return Portfolio(
+            cash=STARTING_CASH,
+            holdings={symbol: 0 for symbol in TRADABLE_SYMBOLS},
+            last_hourly_update=HourlyDate.containing(datetime.now(UTC)),
+        )
