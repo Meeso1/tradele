@@ -15,3 +15,4 @@ keys/
 logs/
 
 .env
+alpaca_recovery_code.txt
