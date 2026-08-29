@@ -6,18 +6,22 @@ from datetime import UTC, datetime
 from app.models.market import HourlyDate
 from app.models.portfolio import Portfolio
 from app.services.database_service import DatabaseService
-from app.services.market_data_service import TRADABLE_SYMBOLS
+from app.services.settings_service import SettingsService
 
 
 STARTING_CASH: float = 100_000.0
 
 
 class PortfolioRepository:
-    def __init__(self, database: DatabaseService, logger: logging.Logger) -> None:
+    def __init__(
+        self, database: DatabaseService, settings: SettingsService, logger: logging.Logger
+    ) -> None:
         self._database: DatabaseService = database
+        self._settings: SettingsService = settings
         self._logger: logging.Logger = logger
 
-    def configure(self, logger: logging.Logger) -> None:
+    def configure(self, settings: SettingsService, logger: logging.Logger) -> None:
+        self._settings = settings
         self._logger = logger
 
     def get(self, user_id: str) -> Portfolio | None:
@@ -56,6 +60,6 @@ class PortfolioRepository:
     def _default_portfolio(self) -> Portfolio:
         return Portfolio(
             cash=STARTING_CASH,
-            holdings={symbol: 0 for symbol in TRADABLE_SYMBOLS},
+            holdings={symbol: 0 for symbol in self._settings.tradable_symbols},
             last_hourly_update=HourlyDate.containing(datetime.now(UTC)),
         )

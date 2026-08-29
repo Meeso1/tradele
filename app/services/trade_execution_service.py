@@ -14,7 +14,7 @@ from app.services.market_data_service import MarketDataService
 from app.services.user_service import UserService
 
 
-TradeExecutionResult = Literal["success", "error", "insufficient_funds"]
+TradeExecutionResult = Literal["success", "error", "insufficient_funds", "symbol_unavailable"]
 
 
 @dataclass
@@ -136,8 +136,8 @@ class TradeExecutionService:
         """
         price_data = prices.prices.get(symbol, None)
         if price_data is None:
-            self._logger.error(f"No price data for symbol: {symbol}")
-            return TradeExecutionDetails(result="error", fill_price=None), portfolio # Trade should be closed - all other windows will also fail
+            self._logger.error(f"No price data for symbol: {symbol} - it may no longer be tradable")
+            return TradeExecutionDetails(result="symbol_unavailable", fill_price=None), portfolio # Trade should be closed - all other windows will also fail
 
         if price_data.low > requested_price:
             self._logger.debug(f"Low price ({price_data.low} @ {price_data.starting_hour.hour}:00 {price_data.starting_hour.day}) is above requested price ({requested_price}) - buy not executed")
@@ -169,8 +169,8 @@ class TradeExecutionService:
         """
         price_data = prices.prices.get(symbol, None)
         if price_data is None:
-            self._logger.error(f"No price data for symbol: {symbol}")
-            return TradeExecutionDetails(result="error", fill_price=None), portfolio # Trade should be closed - all other windows will also fail
+            self._logger.error(f"No price data for symbol: {symbol} - it may no longer be tradable")
+            return TradeExecutionDetails(result="symbol_unavailable", fill_price=None), portfolio # Trade should be closed - all other windows will also fail
 
         if price_data.high < requested_price:
             self._logger.debug(f"High price ({price_data.high} @ {price_data.starting_hour.hour}:00 {price_data.starting_hour.day}) is below requested price ({requested_price}) - sell not executed")
@@ -201,6 +201,8 @@ class TradeExecutionService:
                 return "insufficient_funds"
             case "error":
                 return "error"
+            case "symbol_unavailable":
+                return "symbol_unavailable"
             case _:  # pyright: ignore[reportUnnecessaryComparison]
                 raise ValueError(f"Unknown result: {result}")  # pyright: ignore[reportUnreachable]
             

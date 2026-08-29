@@ -2,18 +2,17 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends
 
-from app.dependencies import MarketDataServiceDep, get_auth_context
+from app.dependencies import MarketDataServiceDep, SettingsServiceDep, get_auth_context
 from app.dtos.market_dtos import PricesResponse
 from app.models.market import HourlyDate
-from app.services.market_data_service import TRADABLE_SYMBOLS
 
 router = APIRouter(prefix="/market", tags=["market"], dependencies=[Depends(get_auth_context)])
 
 
 @router.get("/symbols", response_model=list[str])
-def get_symbols() -> list[str]:
-    """Return the fixed set of symbols players can trade."""
-    return TRADABLE_SYMBOLS
+def get_symbols(settings: SettingsServiceDep) -> list[str]:
+    """Return the configured set of symbols players can trade."""
+    return settings.tradable_symbols
 
 
 @router.get("/prices", response_model=PricesResponse)

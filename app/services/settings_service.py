@@ -19,3 +19,17 @@ class SettingsService:
         self.keys_dir: Path = Path(os.environ.get("TRADELE_KEYS_DIR", "keys"))
         self.log_dir: Path = Path(os.environ.get("TRADELE_LOG_DIR", "logs"))
         self.log_level: str = os.environ.get("TRADELE_LOG_LEVEL", "INFO")
+
+        self.tradable_symbols: list[str] = [
+            symbol.strip().upper()
+            for symbol in os.environ.get(
+                "TRADELE_TRADABLE_SYMBOLS", "AAPL,GOOGL,MSFT,AMZN,TSLA"
+            ).split(",")
+            if symbol.strip()
+        ]
+
+        self.alpaca_api_key_id: str = os.environ.get("ALPACA_API_KEY_ID", "")
+        self.alpaca_api_secret_key: str = os.environ.get("ALPACA_API_SECRET_KEY", "")
+        self.alpaca_base_url: str = os.environ.get(
+            "ALPACA_DATA_BASE_URL", "https://data.alpaca.markets"
+        )

@@ -13,6 +13,7 @@ from app.jobs.trade_execution_job import TradeExecutionJob
 from app.repositories.portfolio_repository import PortfolioRepository
 from app.repositories.trade_repository import TradeRepository
 from app.repositories.user_repository import UserRepository
+from app.services.alpaca_market_data_client import AlpacaMarketDataClient
 from app.services.auth_service import AuthService
 from app.services.database_service import DatabaseService
 from app.services.logger_service import LoggerService
@@ -37,7 +38,7 @@ class Container:
             self.database, self.logger.get_logger("UserRepository")
         )
         self.portfolio_repository: PortfolioRepository = PortfolioRepository(
-            self.database, self.logger.get_logger("PortfolioRepository")
+            self.database, self.settings, self.logger.get_logger("PortfolioRepository")
         )
         self.trade_repository: TradeRepository = TradeRepository(
             self.database, self.logger.get_logger("TradeRepository")
@@ -47,14 +48,17 @@ class Container:
             self.user_repository, self.logger.get_logger("UserService")
         )
         self.auth: AuthService = AuthService(self.settings, self.logger.get_logger("AuthService"))
+        self.alpaca_client: AlpacaMarketDataClient = AlpacaMarketDataClient(
+            self.settings, self.logger.get_logger("AlpacaMarketDataClient")
+        )
         self.market_data: MarketDataService = MarketDataService(
-            self.logger.get_logger("MarketDataService")
+            self.alpaca_client, self.settings, self.logger.get_logger("MarketDataService")
         )
         self.portfolios: PortfolioService = PortfolioService(
             self.portfolio_repository, self.logger.get_logger("PortfolioService")
         )
         self.trades: TradeSubmissionService = TradeSubmissionService(
-            self.trade_repository, self.logger.get_logger("TradeService")
+            self.trade_repository, self.settings, self.logger.get_logger("TradeService")
         )
         self.trade_execution: TradeExecutionService = TradeExecutionService(
             self.logger.get_logger("TradeExecutionService"),
@@ -84,14 +88,19 @@ class Container:
         self.database.configure(self.settings, self.logger.get_logger("DatabaseService"))
 
         self.user_repository.configure(self.logger.get_logger("UserRepository"))
-        self.portfolio_repository.configure(self.logger.get_logger("PortfolioRepository"))
+        self.portfolio_repository.configure(
+            self.settings, self.logger.get_logger("PortfolioRepository")
+        )
         self.trade_repository.configure(self.logger.get_logger("TradeRepository"))
 
         self.users.configure(self.logger.get_logger("UserService"))
         self.auth.configure(self.settings, self.logger.get_logger("AuthService"))
-        self.market_data.configure(self.logger.get_logger("MarketDataService"))
+        self.alpaca_client.configure(
+            self.settings, self.logger.get_logger("AlpacaMarketDataClient")
+        )
+        self.market_data.configure(self.settings, self.logger.get_logger("MarketDataService"))
         self.portfolios.configure(self.logger.get_logger("PortfolioService"))
-        self.trades.configure(self.logger.get_logger("TradeService"))
+        self.trades.configure(self.settings, self.logger.get_logger("TradeService"))
         self.trade_execution.configure(self.logger.get_logger("TradeExecutionService"))
 
 

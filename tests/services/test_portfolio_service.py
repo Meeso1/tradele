@@ -1,7 +1,6 @@
 from app.container import container
 from app.models.portfolio import Portfolio
 from app.repositories.portfolio_repository import STARTING_CASH
-from app.services.market_data_service import TRADABLE_SYMBOLS
 
 
 def test_get_or_create_creates_a_default_portfolio_for_a_new_user():
@@ -10,7 +9,7 @@ def test_get_or_create_creates_a_default_portfolio_for_a_new_user():
     portfolio = container.portfolios.get_or_create(user_id)
 
     assert portfolio.cash == STARTING_CASH
-    assert portfolio.holdings == {symbol: 0 for symbol in TRADABLE_SYMBOLS}
+    assert portfolio.holdings == {symbol: 0 for symbol in container.settings.tradable_symbols}
 
 
 def test_get_or_create_returns_the_same_portfolio_on_repeated_calls():

@@ -24,6 +24,17 @@ uv run uvicorn app.main:app --reload
 The API will be available at http://127.0.0.1:8000, with interactive docs at
 http://127.0.0.1:8000/docs (Swagger UI) and http://127.0.0.1:8000/redoc (ReDoc).
 
+#### Configuration
+
+Settings are read from environment variables (see `app/services/settings_service.py`).
+A `.env` file with placeholder values is included for local development - fill in real
+Alpaca API credentials (used by `MarketDataService` to fetch real hourly stock prices)
+and load it with `uv run`'s built-in `--env-file` support:
+
+```bash
+uv run --env-file .env uvicorn app.main:app --reload
+```
+
 ### Run tests
 
 ```bash

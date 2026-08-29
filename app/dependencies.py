@@ -19,6 +19,7 @@ from app.repositories.trade_repository import TradeRepository
 from app.services.auth_service import AuthService
 from app.services.market_data_service import MarketDataService
 from app.services.portfolio_service import PortfolioService
+from app.services.settings_service import SettingsService
 from app.services.trade_submission_service import TradeSubmissionService
 from app.services.user_service import UserService
 
@@ -68,6 +69,10 @@ def get_trade_service() -> TradeSubmissionService:
     return container.trades
 
 
+def get_settings_service() -> SettingsService:
+    return container.settings
+
+
 TradeRepositoryDep = Annotated[TradeRepository, Depends(get_trade_repository)]
 
 AuthContextDep = Annotated[AuthContext, Depends(get_auth_context)]
@@ -76,3 +81,4 @@ AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 MarketDataServiceDep = Annotated[MarketDataService, Depends(get_market_data_service)]
 PortfolioServiceDep = Annotated[PortfolioService, Depends(get_portfolio_service)]
 TradeServiceDep = Annotated[TradeSubmissionService, Depends(get_trade_service)]
+SettingsServiceDep = Annotated[SettingsService, Depends(get_settings_service)]

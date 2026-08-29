@@ -106,6 +106,24 @@ def test_execute_user_trades_at_hour_marks_insufficient_funds_when_cash_is_too_l
     assert executed[0].fill_price is None
 
 
+def test_execute_user_trades_at_hour_marks_symbol_unavailable_when_no_price_data_exists(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    user_id = container.users.create()
+    _submit(user_id, "limit_buy", quantity=10, requested_price=190.0)
+    _set_last_hourly_update(user_id, HOUR_BEFORE)
+    monkeypatch.setattr(
+        container.market_data, "get_prices", lambda hour: MarketState(hour=HOUR, prices={})
+    )
+
+    container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
+
+    executed = container.trade_repository.list_executed(user_id)
+    assert len(executed) == 1
+    assert executed[0].status == "symbol_unavailable"
+    assert executed[0].fill_price is None
+
+
 def test_execute_user_trades_at_hour_is_a_noop_when_the_portfolio_is_already_up_to_date(
     monkeypatch: pytest.MonkeyPatch,
 ):

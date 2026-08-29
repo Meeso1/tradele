@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from app.models.market import HourlyDate
 from app.models.trade import ActiveTrade, Kind
 from app.repositories.trade_repository import TradeRepository
-from app.services.market_data_service import TRADABLE_SYMBOLS
+from app.services.settings_service import SettingsService
 
 
 class TradeValidationError(ValueError):
@@ -28,11 +28,15 @@ class TradeRequest(BaseModel):
 
 
 class TradeSubmissionService:
-    def __init__(self, trade_repository: TradeRepository, logger: logging.Logger) -> None:
+    def __init__(
+        self, trade_repository: TradeRepository, settings: SettingsService, logger: logging.Logger
+    ) -> None:
         self._trade_repository: TradeRepository = trade_repository
+        self._settings: SettingsService = settings
         self._logger: logging.Logger = logger
 
-    def configure(self, logger: logging.Logger) -> None:
+    def configure(self, settings: SettingsService, logger: logging.Logger) -> None:
+        self._settings = settings
         self._logger = logger
 
     def _validate(self, trades: list[TradeRequest]) -> None:
@@ -40,7 +44,7 @@ class TradeSubmissionService:
         if not trades:
             raise TradeValidationError("Must submit at least one trade")
         for trade in trades:
-            if trade.symbol not in TRADABLE_SYMBOLS:
+            if trade.symbol not in self._settings.tradable_symbols:
                 raise TradeValidationError(f"Unknown symbol: {trade.symbol}")
             if trade.quantity <= 0:
                 raise TradeValidationError("Quantity must be positive")

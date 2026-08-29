@@ -8,7 +8,9 @@ from pydantic import BaseModel
 from app.models.market import HourlyDate
 
 Kind = Literal["limit_buy", "limit_sell"]
-InactiveTradeStatus = Literal["executed", "cancelled", "error", "insufficient_funds"]
+InactiveTradeStatus = Literal[
+    "executed", "cancelled", "error", "insufficient_funds", "symbol_unavailable"
+]
 
 
 class ActiveTrade(BaseModel):
