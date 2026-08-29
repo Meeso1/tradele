@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from app.jobs.job_scheduler import JobScheduler
 from app.jobs.trade_execution_job import TradeExecutionJob
+from app.repositories.market_data_repository import MarketDataRepository
 from app.repositories.portfolio_repository import PortfolioRepository
 from app.repositories.trade_repository import TradeRepository
 from app.repositories.user_repository import UserRepository
@@ -43,6 +44,9 @@ class Container:
         self.trade_repository: TradeRepository = TradeRepository(
             self.database, self.logger.get_logger("TradeRepository")
         )
+        self.market_data_repository: MarketDataRepository = MarketDataRepository(
+            self.database, self.logger.get_logger("MarketDataRepository")
+        )
 
         self.users: UserService = UserService(
             self.user_repository, self.logger.get_logger("UserService")
@@ -52,7 +56,10 @@ class Container:
             self.settings, self.logger.get_logger("AlpacaMarketDataClient")
         )
         self.market_data: MarketDataService = MarketDataService(
-            self.alpaca_client, self.settings, self.logger.get_logger("MarketDataService")
+            self.alpaca_client,
+            self.market_data_repository,
+            self.settings,
+            self.logger.get_logger("MarketDataService"),
         )
         self.portfolios: PortfolioService = PortfolioService(
             self.portfolio_repository, self.logger.get_logger("PortfolioService")
@@ -92,6 +99,7 @@ class Container:
             self.settings, self.logger.get_logger("PortfolioRepository")
         )
         self.trade_repository.configure(self.logger.get_logger("TradeRepository"))
+        self.market_data_repository.configure(self.logger.get_logger("MarketDataRepository"))
 
         self.users.configure(self.logger.get_logger("UserService"))
         self.auth.configure(self.settings, self.logger.get_logger("AuthService"))
