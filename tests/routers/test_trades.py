@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.container import container
 from app.main import app
-from app.services.market_data_service import HourlyDate
+from app.models.market import HourlyDate
 
 client = TestClient(app)
 

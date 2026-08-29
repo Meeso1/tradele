@@ -1,8 +1,8 @@
 from datetime import date, datetime
 
 from app.container import container
-from app.repositories.trade_repository import ActiveTrade
-from app.services.market_data_service import HourlyDate
+from app.models.market import HourlyDate
+from app.models.trade import ActiveTrade
 
 
 def test_exists_for_date_is_false_with_no_requested_trades():

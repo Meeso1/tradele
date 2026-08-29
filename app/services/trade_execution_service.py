@@ -4,10 +4,13 @@ from typing import Literal
 
 from pydantic.dataclasses import dataclass
 
-from app.repositories.portfolio_repository import Portfolio, PortfolioRepository
-from app.repositories.trade_repository import ActiveTrade, InactiveTradeStatus, TradeRepository
+from app.models.market import HourlyDate, MarketState
+from app.models.portfolio import Portfolio
+from app.models.trade import ActiveTrade, InactiveTradeStatus
+from app.repositories.portfolio_repository import PortfolioRepository
+from app.repositories.trade_repository import TradeRepository
 from app.services.database_service import DatabaseService
-from app.services.market_data_service import HourlyDate, MarketDataService, MarketState
+from app.services.market_data_service import MarketDataService
 from app.services.user_service import UserService
 
 

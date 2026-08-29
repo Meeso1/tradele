@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from app.services.market_data_service import HourlyPriceData
+from app.models.market import HourlyPriceData
 
 
 class PricesResponse(BaseModel):

@@ -3,7 +3,7 @@ from datetime import UTC, date, datetime
 import pytest
 
 from app.container import container
-from app.services.market_data_service import HourlyDate
+from app.models.market import HourlyDate
 from app.services.trade_submission_service import (
     TradeRequest,
     TradesAlreadySubmittedError,

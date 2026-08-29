@@ -1,7 +1,8 @@
 from datetime import date, datetime
 
 from app.container import container
-from app.services.market_data_service import TRADABLE_SYMBOLS, HourlyDate
+from app.models.market import HourlyDate
+from app.services.market_data_service import TRADABLE_SYMBOLS
 
 
 def test_get_prices_returns_a_price_for_every_tradable_symbol():

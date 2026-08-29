@@ -3,19 +3,13 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 
-from pydantic import BaseModel
-
+from app.models.market import HourlyDate
+from app.models.portfolio import Portfolio
 from app.services.database_service import DatabaseService
-from app.services.market_data_service import TRADABLE_SYMBOLS, HourlyDate
+from app.services.market_data_service import TRADABLE_SYMBOLS
 
 
 STARTING_CASH: float = 100_000.0
-
-
-class Portfolio(BaseModel):
-    cash: float
-    holdings: dict[str, float]
-    last_hourly_update: HourlyDate | None
 
 
 class PortfolioRepository:

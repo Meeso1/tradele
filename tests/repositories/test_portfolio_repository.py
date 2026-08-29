@@ -1,5 +1,5 @@
 from app.container import container
-from app.repositories.portfolio_repository import Portfolio
+from app.models.portfolio import Portfolio
 
 
 def test_get_returns_none_for_a_user_with_no_portfolio():

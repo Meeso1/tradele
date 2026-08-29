@@ -1,5 +1,6 @@
 from app.container import container
-from app.repositories.portfolio_repository import STARTING_CASH, Portfolio
+from app.models.portfolio import Portfolio
+from app.repositories.portfolio_repository import STARTING_CASH
 from app.services.market_data_service import TRADABLE_SYMBOLS
 
 

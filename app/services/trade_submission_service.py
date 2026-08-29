@@ -6,8 +6,10 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel
 
-from app.repositories.trade_repository import ActiveTrade, Kind, TradeRepository
-from app.services.market_data_service import TRADABLE_SYMBOLS, HourlyDate
+from app.models.market import HourlyDate
+from app.models.trade import ActiveTrade, Kind
+from app.repositories.trade_repository import TradeRepository
+from app.services.market_data_service import TRADABLE_SYMBOLS
 
 
 class TradeValidationError(ValueError):

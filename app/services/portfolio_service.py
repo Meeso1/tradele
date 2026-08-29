@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import logging
 
-from app.repositories.portfolio_repository import Portfolio, PortfolioRepository
+from app.models.portfolio import Portfolio
+from app.repositories.portfolio_repository import PortfolioRepository
 
 
 class PortfolioService:

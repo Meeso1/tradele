@@ -8,8 +8,14 @@ from app.dependencies import (
     UserServiceDep,
     get_auth_context,
 )
-from app.dtos.trade_dtos import SubmitTradesRequest, SubmitTradesResponse, TradesResponse
-from app.services.market_data_service import HourlyDate
+from app.dtos.trade_dtos import (
+    ActiveTradeResponse,
+    HistoricalTradeResponse,
+    SubmitTradesRequest,
+    SubmitTradesResponse,
+    TradesResponse,
+)
+from app.models.market import HourlyDate
 from app.services.trade_submission_service import (
     TradeRequest,
     TradesAlreadySubmittedError,
@@ -62,6 +68,12 @@ def get_trades(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     return TradesResponse(
-        requested=trade_repo.list_requested(auth_context.user_id),
-        closed=trade_repo.list_executed(auth_context.user_id),
+        requested=[
+            ActiveTradeResponse.from_model(trade)
+            for trade in trade_repo.list_requested(auth_context.user_id)
+        ],
+        closed=[
+            HistoricalTradeResponse.from_model(trade)
+            for trade in trade_repo.list_executed(auth_context.user_id)
+        ],
     )

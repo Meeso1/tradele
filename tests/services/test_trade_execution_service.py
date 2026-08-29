@@ -3,8 +3,8 @@ from datetime import date
 import pytest
 
 from app.container import container
-from app.repositories.trade_repository import Kind
-from app.services.market_data_service import HourlyDate, HourlyPriceData, MarketState
+from app.models.market import HourlyDate, HourlyPriceData, MarketState
+from app.models.trade import Kind
 from app.services.trade_submission_service import TradeRequest
 
 HOUR = HourlyDate(day=date(2024, 1, 1), hour=10)

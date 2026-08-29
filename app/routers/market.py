@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends
 
 from app.dependencies import MarketDataServiceDep, get_auth_context
 from app.dtos.market_dtos import PricesResponse
-from app.services.market_data_service import TRADABLE_SYMBOLS, HourlyDate
+from app.models.market import HourlyDate
+from app.services.market_data_service import TRADABLE_SYMBOLS
 
 router = APIRouter(prefix="/market", tags=["market"], dependencies=[Depends(get_auth_context)])
 
