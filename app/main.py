@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.container import container
-from app.routers import api_keys, auth, health, market, portfolio, trades, users
+from app.routers import api_keys, auth, health, market, portfolio, scheduled_jobs, trades, users
 
 
 @asynccontextmanager
@@ -32,3 +32,4 @@ app.include_router(api_keys.router)
 app.include_router(market.router)
 app.include_router(portfolio.router)
 app.include_router(trades.router)
+app.include_router(scheduled_jobs.router)

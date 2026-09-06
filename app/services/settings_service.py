@@ -35,8 +35,9 @@ class SettingsService:
         )
 
         # SHA-256 hex digest of the secret part of the service account's API
-        # key, used to create the key on first startup (existing keys are
-        # never modified). The credential itself is `key_id:secret`, with
-        # each part base64-encoded inside HTTP Basic auth. If unset, a key
-        # is generated at startup and printed to the console instead.
+        # key, used to create the key on first startup
         self.service_api_key_hash: str = os.environ.get("TRADELE_SERVICE_API_KEY_HASH", "")
+
+        # If false, scheduled jobs are not run on a background schedule;
+        # the service is expected to trigger them via the scheduled-jobs API.
+        self.run_scheduled_jobs: bool = os.environ.get("TRADELE_RUN_SCHEDULED_JOBS", "true").lower() == "true"

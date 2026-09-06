@@ -101,7 +101,7 @@ class Container:
             self.database,
         )
 
-        self.job_scheduler: JobScheduler = JobScheduler(self.logger.get_logger("JobScheduler"))
+        self.job_scheduler: JobScheduler = JobScheduler(self.settings, self.logger.get_logger("JobScheduler"))
         self.job_scheduler.register(TradeExecutionJob(self.trade_execution))
 
     def reset(self) -> None:
@@ -141,6 +141,8 @@ class Container:
         self.portfolios.configure(self.logger.get_logger("PortfolioService"))
         self.trades.configure(self.settings, self.logger.get_logger("TradeService"))
         self.trade_execution.configure(self.logger.get_logger("TradeExecutionService"))
+
+        self.job_scheduler.configure(self.settings, self.logger.get_logger("JobScheduler"))
 
 
 container = Container()

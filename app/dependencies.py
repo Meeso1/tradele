@@ -20,6 +20,7 @@ from fastapi.security import (
 
 from app.auth_context import SCOPE_SERVICE_ACCESS, AuthContext
 from app.container import container
+from app.jobs.job_scheduler import JobScheduler
 from app.repositories.trade_repository import TradeRepository
 from app.services.api_key_service import ApiKeyService
 from app.services.auth_service import AuthService
@@ -145,6 +146,10 @@ def get_settings_service() -> SettingsService:
     return container.settings
 
 
+def get_job_scheduler() -> JobScheduler:
+    return container.job_scheduler
+
+
 TradeRepositoryDep = Annotated[TradeRepository, Depends(get_trade_repository)]
 
 AuthContextDep = Annotated[AuthContext, Depends(get_auth_context)]
@@ -159,3 +164,4 @@ MarketDataServiceDep = Annotated[MarketDataService, Depends(get_market_data_serv
 PortfolioServiceDep = Annotated[PortfolioService, Depends(get_portfolio_service)]
 TradeServiceDep = Annotated[TradeSubmissionService, Depends(get_trade_service)]
 SettingsServiceDep = Annotated[SettingsService, Depends(get_settings_service)]
+JobSchedulerDep = Annotated[JobScheduler, Depends(get_job_scheduler)]

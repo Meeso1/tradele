@@ -20,6 +20,11 @@ class TradeExecutionJob(ScheduledJob):
 
     @property
     @override
+    def name(self) -> str:
+        return "trade_execution"
+
+    @property
+    @override
     def interval_seconds(self) -> float:
         return _INTERVAL_SECONDS
 

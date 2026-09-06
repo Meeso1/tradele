@@ -8,6 +8,12 @@ class ScheduledJob(abc.ABC):
 
     @property
     @abc.abstractmethod
+    def name(self) -> str:
+        """Unique name of the job, used to trigger it via API."""      
+        ...
+
+    @property
+    @abc.abstractmethod
     def interval_seconds(self) -> float:
         """How long to wait between the start of one run and the start of the next."""
         ...
