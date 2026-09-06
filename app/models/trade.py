@@ -7,9 +7,21 @@ from pydantic import BaseModel
 
 from app.models.market import HourlyDate
 
-Kind = Literal["limit_buy", "limit_sell"]
+Kind = Literal[
+    "market_buy",
+    "market_sell",
+    "limit_buy",
+    "limit_sell",
+    "stop_buy",
+    "stop_sell",
+]
 InactiveTradeStatus = Literal[
-    "executed", "cancelled", "error", "insufficient_funds", "symbol_unavailable"
+    "executed",
+    "cancelled",
+    "error",
+    "insufficient_funds",
+    "symbol_unavailable",
+    "malformed_request",
 ]
 
 
@@ -22,7 +34,7 @@ class ActiveTrade(BaseModel):
     user_id: str
     symbol: str
     kind: Kind
-    requested_price: float
+    requested_price: float | None
     quantity: float
     requested_at: datetime # Real time at which the trade was requested
     active_from: HourlyDate # Hour when the trade is active. After being posted, the trade starts being active from the next full hour.
@@ -36,7 +48,7 @@ class HistoricalTrade(BaseModel):
     user_id: str
     symbol: str
     kind: Kind
-    requested_price: float
+    requested_price: float | None
     quantity: float
     requested_at: datetime
     active_from: HourlyDate

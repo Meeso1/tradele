@@ -14,7 +14,13 @@ from app.services.market_data_service import MarketDataService
 from app.services.user_service import UserService
 
 
-TradeExecutionResult = Literal["success", "error", "insufficient_funds", "symbol_unavailable"]
+TradeExecutionResult = Literal[
+    "success",
+    "error",
+    "insufficient_funds",
+    "symbol_unavailable",
+    "malformed_request",
+]
 
 
 @dataclass
@@ -111,15 +117,100 @@ class TradeExecutionService:
 
             self._portfolio_repo.update(user_id, new_portfolio)
 
-    def _try_execute_trade(self, trade: ActiveTrade, pricing_data: MarketState, portfolio: PortfolioState) -> tuple[TradeExecutionDetails | None, PortfolioState]:
+    def _try_execute_trade(
+        self,
+        trade: ActiveTrade,
+        pricing_data: MarketState,
+        portfolio: PortfolioState,
+    ) -> tuple[TradeExecutionDetails | None, PortfolioState]:
         """Attempt to execute a single trade against the given hourly window."""
         match trade.kind:
+            case "market_buy":
+                return self._try_execute_market_buy(trade.symbol, trade.quantity, pricing_data, portfolio)
+            case "market_sell":
+                return self._try_execute_market_sell(trade.symbol, trade.quantity, pricing_data, portfolio)
             case "limit_buy":
+                if trade.requested_price is None:
+                    return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
                 return self._try_execute_limit_buy(trade.symbol, trade.requested_price, trade.quantity, pricing_data, portfolio)
             case "limit_sell":
+                if trade.requested_price is None:
+                    return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
                 return self._try_execute_limit_sell(trade.symbol, trade.requested_price, trade.quantity, pricing_data, portfolio)
+            case "stop_buy":
+                if trade.requested_price is None:
+                    return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
+                return self._try_execute_stop_buy(trade.symbol, trade.requested_price, trade.quantity, pricing_data, portfolio)
+            case "stop_sell":
+                if trade.requested_price is None:
+                    return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
+                return self._try_execute_stop_sell(trade.symbol, trade.requested_price, trade.quantity, pricing_data, portfolio)
             case _:  # pyright: ignore[reportUnnecessaryComparison]
-                raise ValueError(f"Unknown trade kind: {trade.kind}")  # pyright: ignore[reportUnreachable]
+                raise ValueError(f"Unknown trade kind: {trade.kind}") # pyright: ignore[reportUnreachable]
+
+    def _try_execute_market_buy(
+        self,
+        symbol: str,
+        quantity: float,
+        prices: MarketState,
+        portfolio: PortfolioState,
+    ) -> tuple[TradeExecutionDetails | None, PortfolioState]:
+        """
+        Attempt to execute a market buy trade against the given hourly window.
+
+        Returns a tuple of (result, updated_portfolio).
+        """
+        price_data = prices.prices.get(symbol, None)
+        if price_data is None:
+            self._logger.error(f"No price data for symbol: {symbol} - it may no longer be tradable")
+            return TradeExecutionDetails(result="symbol_unavailable", fill_price=None), portfolio # Trade should be closed - all other windows will also fail
+
+        # Market buy is executed at the beginning of the first available hourly window
+        total_price = quantity * price_data.open
+        if portfolio.cash < total_price:
+            self._logger.debug(f"Insufficient cash: {portfolio.cash} < {total_price} - market buy not executed")
+            return TradeExecutionDetails(result="insufficient_funds", fill_price=None), portfolio
+
+        new_cash = portfolio.cash - total_price
+        new_holdings = portfolio.holdings.copy()
+        new_holdings[symbol] = new_holdings.get(symbol, 0) + quantity
+        new_portfolio = PortfolioState(cash=new_cash, holdings=new_holdings)
+        self._logger.debug(f"Executed market buy: {symbol} @ {price_data.open} x {quantity}")
+        return TradeExecutionDetails(result="success", fill_price=price_data.open), new_portfolio
+
+    def _try_execute_market_sell(
+        self,
+        symbol: str,
+        quantity: float,
+        prices: MarketState,
+        portfolio: PortfolioState,
+    ) -> tuple[TradeExecutionDetails | None, PortfolioState]:
+        """
+        Attempt to execute a market sell trade against the given hourly window.
+
+        Returns a tuple of (result, updated_portfolio).
+        """
+        price_data = prices.prices.get(symbol, None)
+        if price_data is None:
+            self._logger.error(f"No price data for symbol: {symbol} - it may no longer be tradable")
+            return TradeExecutionDetails(result="symbol_unavailable", fill_price=None), portfolio # Trade should be closed - all other windows will also fail
+
+        # Market sell is executed at the beginning of the first available hourly window
+        held_quantity = portfolio.holdings.get(symbol, 0)
+        if held_quantity < quantity:
+            self._logger.debug(f"Insufficient holdings: {held_quantity} < {quantity} - market sell not executed")
+            return TradeExecutionDetails(result="insufficient_funds", fill_price=None), portfolio
+
+        new_cash = portfolio.cash + quantity * price_data.open
+        new_holdings = portfolio.holdings.copy()
+        new_holdings[symbol] = held_quantity - quantity
+        
+        new_portfolio = PortfolioState(
+            cash=new_cash,
+            holdings=new_holdings,
+        )
+        self._logger.debug(f"Executed market sell: {symbol} @ {price_data.open} x {quantity}")
+        return TradeExecutionDetails(result="success", fill_price=price_data.open), new_portfolio
 
     def _try_execute_limit_buy(
         self,
@@ -130,7 +221,7 @@ class TradeExecutionService:
         portfolio: PortfolioState,
     ) -> tuple[TradeExecutionDetails | None, PortfolioState]:
         """
-        Attempt to execute a simple buy trade against the given hourly window.
+        Attempt to execute a limit buy trade against the given hourly window.
 
         Returns a tuple of (result, updated_portfolio).
         """
@@ -140,7 +231,7 @@ class TradeExecutionService:
             return TradeExecutionDetails(result="symbol_unavailable", fill_price=None), portfolio # Trade should be closed - all other windows will also fail
 
         if price_data.low > requested_price:
-            self._logger.debug(f"Low price ({price_data.low} @ {price_data.starting_hour.hour}:00 {price_data.starting_hour.day}) is above requested price ({requested_price}) - buy not executed")
+            self._logger.debug(f"Low price ({price_data.low} @ {price_data.starting_hour}) is above requested price ({requested_price}) - limit buy not executed")
             return None, portfolio
 
         total_price = quantity * requested_price
@@ -152,6 +243,7 @@ class TradeExecutionService:
         new_holdings = portfolio.holdings.copy()
         new_holdings[symbol] = new_holdings.get(symbol, 0) + quantity
         new_portfolio = PortfolioState(cash=new_cash, holdings=new_holdings)
+        self._logger.debug(f"Executed limit buy: {symbol} @ {requested_price} x {quantity}")
         return TradeExecutionDetails(result="success", fill_price=requested_price), new_portfolio
 
     def _try_execute_limit_sell(
@@ -163,7 +255,7 @@ class TradeExecutionService:
         portfolio: PortfolioState,
     ) -> tuple[TradeExecutionDetails | None, PortfolioState]:
         """
-        Attempt to execute a simple sell trade against the given hourly window.
+        Attempt to execute a limit sell trade against the given hourly window.
 
         Returns a tuple of (success, updated_portfolio).
         """
@@ -173,12 +265,12 @@ class TradeExecutionService:
             return TradeExecutionDetails(result="symbol_unavailable", fill_price=None), portfolio # Trade should be closed - all other windows will also fail
 
         if price_data.high < requested_price:
-            self._logger.debug(f"High price ({price_data.high} @ {price_data.starting_hour.hour}:00 {price_data.starting_hour.day}) is below requested price ({requested_price}) - sell not executed")
+            self._logger.debug(f"High price ({price_data.high} @ {price_data.starting_hour}) is below requested price ({requested_price}) - sell not executed")
             return None, portfolio # Trade stays open
 
         held_quantity = portfolio.holdings.get(symbol, 0)
         if held_quantity < quantity:
-            self._logger.debug(f"Insufficient holdings: {symbol} {held_quantity} < {quantity}) - sell not executed")
+            self._logger.debug(f"Insufficient holdings: {symbol} {held_quantity} < {quantity}) - limit sell not executed")
             return TradeExecutionDetails(result="insufficient_funds", fill_price=None), portfolio
 
         new_cash = portfolio.cash + quantity * requested_price
@@ -189,8 +281,86 @@ class TradeExecutionService:
             cash=new_cash,
             holdings=new_holdings,
         )
-        self._logger.debug(f"Executed simple sell: {symbol} @ {requested_price} x {quantity}")
+        self._logger.debug(f"Executed limit sell: {symbol} @ {requested_price} x {quantity}")
         return TradeExecutionDetails(result="success", fill_price=requested_price), new_portfolio
+
+    def _try_execute_stop_buy(
+        self,
+        symbol: str,
+        requested_price: float,
+        quantity: float,
+        prices: MarketState,
+        portfolio: PortfolioState,
+    ) -> tuple[TradeExecutionDetails | None, PortfolioState]:
+        """
+        Attempt to execute a stop buy trade against the given hourly window.
+
+        Returns a tuple of (result, updated_portfolio).
+        """
+        price_data = prices.prices.get(symbol, None)
+        if price_data is None:
+            self._logger.error(f"No price data for symbol: {symbol} - it may no longer be tradable")
+            return TradeExecutionDetails(result="symbol_unavailable", fill_price=None), portfolio # Trade should be closed - all other windows will also fail
+
+        if price_data.high < requested_price:
+            self._logger.debug(f"High price ({price_data.high} @ {price_data.starting_hour}) is below requested price ({requested_price}) - stop buy not executed")
+            return None, portfolio
+
+        # Stop buy will execute immediately (at open) if the price is above the requested price.
+        # Otherwise, it will execute when the price reaches the requested price.
+        settled_price = max(price_data.open, requested_price)
+        total_price = quantity * settled_price
+        if portfolio.cash < total_price:
+            self._logger.debug(f"Insufficient cash: {portfolio.cash} < {total_price} - buy not executed")
+            return TradeExecutionDetails(result="insufficient_funds", fill_price=None), portfolio
+
+        new_cash = portfolio.cash - total_price
+        new_holdings = portfolio.holdings.copy()
+        new_holdings[symbol] = new_holdings.get(symbol, 0) + quantity
+        new_portfolio = PortfolioState(cash=new_cash, holdings=new_holdings)
+        self._logger.debug(f"Executed stop buy: {symbol} @ {settled_price} x {quantity}")
+        return TradeExecutionDetails(result="success", fill_price=settled_price), new_portfolio
+
+    def _try_execute_stop_sell(
+        self,
+        symbol: str,
+        requested_price: float,
+        quantity: float,
+        prices: MarketState,
+        portfolio: PortfolioState,
+    ) -> tuple[TradeExecutionDetails | None, PortfolioState]:
+        """
+        Attempt to execute a stop sell trade against the given hourly window.
+
+        Returns a tuple of (result, updated_portfolio).
+        """
+        price_data = prices.prices.get(symbol, None)
+        if price_data is None:
+            self._logger.error(f"No price data for symbol: {symbol} - it may no longer be tradable")
+            return TradeExecutionDetails(result="symbol_unavailable", fill_price=None), portfolio # Trade should be closed - all other windows will also fail
+
+        if price_data.low > requested_price:
+            self._logger.debug(f"Low price ({price_data.low} @ {price_data.starting_hour}) is above requested price ({requested_price}) - stop sell not executed")
+            return None, portfolio
+
+        # Stop sell will execute immediately (at open) if the price is below the requested price.
+        # Otherwise, it will execute when the price reaches the requested price.
+        held_quantity = portfolio.holdings.get(symbol, 0)
+        if held_quantity < quantity:
+            self._logger.debug(f"Insufficient holdings: {symbol} {held_quantity} < {quantity}) - stop sell not executed")
+            return TradeExecutionDetails(result="insufficient_funds", fill_price=None), portfolio
+
+        settled_price = min(price_data.open, requested_price)
+        new_cash = portfolio.cash + quantity * settled_price
+        new_holdings = portfolio.holdings.copy()
+        new_holdings[symbol] = held_quantity - quantity
+        
+        new_portfolio = PortfolioState(
+            cash=new_cash,
+            holdings=new_holdings,
+        )
+        self._logger.debug(f"Executed stop sell: {symbol} @ {settled_price} x {quantity}")
+        return TradeExecutionDetails(result="success", fill_price=settled_price), new_portfolio
 
     @staticmethod
     def _to_status(result: TradeExecutionResult) -> InactiveTradeStatus:
@@ -203,6 +373,8 @@ class TradeExecutionService:
                 return "error"
             case "symbol_unavailable":
                 return "symbol_unavailable"
+            case "malformed_request":
+                return "malformed_request"
             case _:  # pyright: ignore[reportUnnecessaryComparison]
                 raise ValueError(f"Unknown result: {result}")  # pyright: ignore[reportUnreachable]
             

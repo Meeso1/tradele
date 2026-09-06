@@ -64,6 +64,43 @@ def test_submit_rejects_an_unknown_symbol():
         )
 
 
+def test_submit_records_a_market_order_without_a_requested_price():
+    user_id = container.users.create()
+
+    trade_ids = container.trades.submit(
+        user_id,
+        [TradeRequest(symbol="AAPL", kind="market_buy", quantity=1)],
+        TODAY,
+    )
+
+    requested = container.trade_repository.list_requested(user_id)
+    assert len(requested) == 1
+    assert requested[0].id == trade_ids[0]
+    assert requested[0].requested_price is None
+
+
+def test_submit_rejects_a_limit_order_without_a_requested_price():
+    user_id = container.users.create()
+
+    with pytest.raises(TradeValidationError):
+        container.trades.submit(
+            user_id,
+            [TradeRequest(symbol="AAPL", kind="limit_buy", quantity=1)],
+            TODAY,
+        )
+
+
+def test_submit_rejects_a_stop_order_without_a_requested_price():
+    user_id = container.users.create()
+
+    with pytest.raises(TradeValidationError):
+        container.trades.submit(
+            user_id,
+            [TradeRequest(symbol="AAPL", kind="stop_sell", quantity=1)],
+            TODAY,
+        )
+
+
 def test_submit_rejects_an_empty_batch():
     user_id = container.users.create()
 

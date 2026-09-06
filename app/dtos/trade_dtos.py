@@ -14,7 +14,8 @@ class TradeInput(BaseModel):
     symbol: str
     kind: Kind
     quantity: float = Field(gt=0.001)
-    requested_price: float = Field(gt=0)
+    # Required for limit/stop orders (enforced by TradeSubmissionService); ignored for market orders.
+    requested_price: float | None = Field(default=None, gt=0)
 
 
 class SubmitTradesRequest(BaseModel):
@@ -30,7 +31,7 @@ class ActiveTradeResponse(BaseModel):
     user_id: str
     symbol: str
     kind: Kind
-    requested_price: float
+    requested_price: float | None
     quantity: float
     requested_at: datetime
     active_from: HourlyDate
@@ -54,7 +55,7 @@ class HistoricalTradeResponse(BaseModel):
     user_id: str
     symbol: str
     kind: Kind
-    requested_price: float
+    requested_price: float | None
     quantity: float
     requested_at: datetime
     active_from: HourlyDate

@@ -70,6 +70,37 @@ def test_submit_trades_returns_400_for_an_unknown_symbol(
     assert response.status_code == 400
 
 
+def test_submit_trades_accepts_a_market_order_without_a_requested_price(
+    auth_headers: Callable[[str], dict[str, str]],
+):
+    user_id = container.users.create()
+
+    response = client.post(
+        "/trades",
+        json={"trades": [{"symbol": "AAPL", "kind": "market_buy", "quantity": 1}]},
+        headers=auth_headers(user_id),
+    )
+
+    assert response.status_code == 201
+    requested = container.trade_repository.list_requested(user_id)
+    assert len(requested) == 1
+    assert requested[0].requested_price is None
+
+
+def test_submit_trades_returns_400_for_a_limit_order_without_a_requested_price(
+    auth_headers: Callable[[str], dict[str, str]],
+):
+    user_id = container.users.create()
+
+    response = client.post(
+        "/trades",
+        json={"trades": [{"symbol": "AAPL", "kind": "limit_buy", "quantity": 1}]},
+        headers=auth_headers(user_id),
+    )
+
+    assert response.status_code == 400
+
+
 def test_submit_trades_returns_409_when_already_submitted_today(
     auth_headers: Callable[[str], dict[str, str]],
 ):

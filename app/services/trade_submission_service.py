@@ -24,7 +24,7 @@ class TradeRequest(BaseModel):
     symbol: str
     kind: Kind
     quantity: float
-    requested_price: float
+    requested_price: float | None = None
 
 
 class TradeSubmissionService:
@@ -48,6 +48,8 @@ class TradeSubmissionService:
                 raise TradeValidationError(f"Unknown symbol: {trade.symbol}")
             if trade.quantity <= 0:
                 raise TradeValidationError("Quantity must be positive")
+            if trade.kind != "market_buy" and trade.kind != "market_sell" and trade.requested_price is None:
+                raise TradeValidationError(f"requested_price is required for {trade.kind} orders")
 
     def has_submitted_today(self, user_id: str, date: HourlyDate) -> bool:
         return self._trade_repository.exists_for_date(user_id, date)
