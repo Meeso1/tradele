@@ -9,7 +9,7 @@ class ScheduledJob(abc.ABC):
     @property
     @abc.abstractmethod
     def interval_seconds(self) -> float:
-        """How long to wait between the end of one run and the start of the next."""
+        """How long to wait between the start of one run and the start of the next."""
         ...
 
     @abc.abstractmethod
