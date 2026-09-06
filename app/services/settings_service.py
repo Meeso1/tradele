@@ -33,3 +33,10 @@ class SettingsService:
         self.alpaca_base_url: str = os.environ.get(
             "ALPACA_DATA_BASE_URL", "https://data.alpaca.markets"
         )
+
+        # SHA-256 hex digest of the secret part of the service account's API
+        # key, used to create the key on first startup (existing keys are
+        # never modified). The credential itself is `key_id:secret`, with
+        # each part base64-encoded inside HTTP Basic auth. If unset, a key
+        # is generated at startup and printed to the console instead.
+        self.service_api_key_hash: str = os.environ.get("TRADELE_SERVICE_API_KEY_HASH", "")

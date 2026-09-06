@@ -1,6 +1,8 @@
 from collections.abc import Callable
 from pathlib import Path
 
+import base64
+
 import pytest
 
 
@@ -35,3 +37,32 @@ def auth_headers() -> Callable[[str], dict[str, str]]:
         return {"Authorization": f"Bearer {token}"}
 
     return _auth_headers
+
+
+@pytest.fixture
+def service_auth_headers() -> dict[str, str]:
+    """Ensure the service account and its auto-created API key exist, then
+    return `Authorization` headers authenticating with that key.
+    """
+    from app.container import container
+
+    authorization = container.service_account_creator.ensure_exists()
+    assert authorization is not None, "Service account key should have been generated"
+    return {"Authorization": authorization}
+
+
+@pytest.fixture
+def decode_basic_authorization() -> Callable[[str], tuple[str, str]]:
+    """Return a function decoding a Basic `Authorization` header value into
+    its `(key_id, secret)` parts (the inverse of
+    `ApiKeyService.format_authorization_header`).
+    """
+
+    def _decode(authorization: str) -> tuple[str, str]:
+        assert authorization.startswith("Basic ")
+        username, _, password = base64.b64decode(authorization[len("Basic ") :]).decode().partition(
+            ":"
+        )
+        return base64.b64decode(username).decode(), base64.b64decode(password).decode()
+
+    return _decode

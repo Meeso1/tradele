@@ -10,16 +10,20 @@ from __future__ import annotations
 
 from app.jobs.job_scheduler import JobScheduler
 from app.jobs.trade_execution_job import TradeExecutionJob
+from app.repositories.api_key_repository import ApiKeyRepository
 from app.repositories.market_data_repository import MarketDataRepository
 from app.repositories.portfolio_repository import PortfolioRepository
 from app.repositories.trade_repository import TradeRepository
 from app.repositories.user_repository import UserRepository
 from app.services.alpaca_market_data_client import AlpacaMarketDataClient
+from app.services.api_key_service import ApiKeyService
 from app.services.auth_service import AuthService
+from app.services.authentication_service import AuthenticationService
 from app.services.database_service import DatabaseService
 from app.services.logger_service import LoggerService
 from app.services.market_data_service import MarketDataService
 from app.services.portfolio_service import PortfolioService
+from app.services.service_account_creator import ServiceAccountCreator
 from app.services.settings_service import SettingsService
 from app.services.trade_execution_service import TradeExecutionService
 from app.services.trade_submission_service import TradeSubmissionService
@@ -44,6 +48,9 @@ class Container:
         self.trade_repository: TradeRepository = TradeRepository(
             self.database, self.logger.get_logger("TradeRepository")
         )
+        self.api_key_repository: ApiKeyRepository = ApiKeyRepository(
+            self.database, self.logger.get_logger("ApiKeyRepository")
+        )
         self.market_data_repository: MarketDataRepository = MarketDataRepository(
             self.database, self.logger.get_logger("MarketDataRepository")
         )
@@ -52,6 +59,24 @@ class Container:
             self.user_repository, self.logger.get_logger("UserService")
         )
         self.auth: AuthService = AuthService(self.settings, self.logger.get_logger("AuthService"))
+        self.api_keys: ApiKeyService = ApiKeyService(
+            self.api_key_repository,
+            self.users,
+            self.settings,
+            self.logger.get_logger("ApiKeyService"),
+        )
+        self.authentication: AuthenticationService = AuthenticationService(
+            self.auth,
+            self.api_keys,
+            self.users,
+            self.logger.get_logger("AuthenticationService"),
+        )
+        self.service_account_creator: ServiceAccountCreator = ServiceAccountCreator(
+            self.users,
+            self.api_keys,
+            self.settings,
+            self.logger.get_logger("ServiceAccountCreator"),
+        )
         self.alpaca_client: AlpacaMarketDataClient = AlpacaMarketDataClient(
             self.settings, self.logger.get_logger("AlpacaMarketDataClient")
         )
@@ -99,10 +124,16 @@ class Container:
             self.settings, self.logger.get_logger("PortfolioRepository")
         )
         self.trade_repository.configure(self.logger.get_logger("TradeRepository"))
+        self.api_key_repository.configure(self.logger.get_logger("ApiKeyRepository"))
         self.market_data_repository.configure(self.logger.get_logger("MarketDataRepository"))
 
         self.users.configure(self.logger.get_logger("UserService"))
         self.auth.configure(self.settings, self.logger.get_logger("AuthService"))
+        self.api_keys.configure(self.settings, self.logger.get_logger("ApiKeyService"))
+        self.authentication.configure(self.logger.get_logger("AuthenticationService"))
+        self.service_account_creator.configure(
+            self.settings, self.logger.get_logger("ServiceAccountCreator")
+        )
         self.alpaca_client.configure(
             self.settings, self.logger.get_logger("AlpacaMarketDataClient")
         )

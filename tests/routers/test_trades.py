@@ -29,9 +29,11 @@ def test_submit_trades_records_requested_trades(auth_headers: Callable[[str], di
     assert len(container.trade_repository.list_requested(user_id)) == 1
 
 
-def test_submit_trades_returns_404_for_an_unknown_user(
+def test_submit_trades_rejects_a_token_for_an_unknown_user(
     auth_headers: Callable[[str], dict[str, str]],
 ):
+    # The auth layer resolves the user (for per-user auth method checks), so
+    # an unknown user is rejected there with 401, before the route's 404.
     response = client.post(
         "/trades",
         json={
@@ -42,7 +44,7 @@ def test_submit_trades_returns_404_for_an_unknown_user(
         headers=auth_headers("does-not-exist"),
     )
 
-    assert response.status_code == 404
+    assert response.status_code == 401
 
 
 def test_submit_trades_returns_400_for_an_unknown_symbol(
@@ -141,10 +143,14 @@ def test_get_trades_returns_requested_and_closed_trades(
     assert len(body["closed"]) == 1
 
 
-def test_get_trades_returns_404_for_an_unknown_user(auth_headers: Callable[[str], dict[str, str]]):
+def test_get_trades_rejects_a_token_for_an_unknown_user(
+    auth_headers: Callable[[str], dict[str, str]],
+):
+    # The auth layer resolves the user (for per-user auth method checks), so
+    # an unknown user is rejected there with 401, before the route's 404.
     response = client.get("/trades", headers=auth_headers("does-not-exist"))
 
-    assert response.status_code == 404
+    assert response.status_code == 401
 
 
 def test_get_trades_requires_authentication():

@@ -4,12 +4,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.container import container
-from app.routers import auth, health, market, portfolio, trades, users
+from app.routers import api_keys, auth, health, market, portfolio, trades, users
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     container.database.run_migrations()
+    container.service_account_creator.ensure_exists()
     container.job_scheduler.start()
     try:
         yield
@@ -27,6 +28,7 @@ app = FastAPI(
 app.include_router(health.router)
 app.include_router(users.router)
 app.include_router(auth.router)
+app.include_router(api_keys.router)
 app.include_router(market.router)
 app.include_router(portfolio.router)
 app.include_router(trades.router)

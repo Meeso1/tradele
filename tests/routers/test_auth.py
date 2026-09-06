@@ -23,3 +23,13 @@ def test_issue_token_for_unknown_user_returns_404():
     response = client.post("/auth/token", json={"user_id": "does-not-exist"})
 
     assert response.status_code == 404
+
+
+def test_issue_token_for_service_account_returns_403():
+    from app.services.user_service import UserService
+
+    container.users.ensure_service_account_exists()
+
+    response = client.post("/auth/token", json={"user_id": UserService.SERVICE_ACCOUNT_ID})
+
+    assert response.status_code == 403
