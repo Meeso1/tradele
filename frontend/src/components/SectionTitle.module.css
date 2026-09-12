@@ -1,0 +1,6 @@
+.title {
+  font: 700 11px var(--font-mono);
+  letter-spacing: 1px;
+  color: var(--mut);
+  text-transform: uppercase;
+}

@@ -1,0 +1,18 @@
+.buy,
+.sell {
+  flex: 0 0 44px;
+  text-align: center;
+  font: 700 9px var(--font-mono);
+  border-radius: 6px;
+  padding: 4px 0;
+}
+
+.buy {
+  color: var(--up);
+  border: 1px solid var(--up);
+}
+
+.sell {
+  color: var(--down);
+  border: 1px solid var(--down);
+}

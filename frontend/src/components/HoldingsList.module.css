@@ -1,0 +1,101 @@
+.head {
+  padding: 16px 18px 6px;
+  border-top: 1px solid var(--line);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line2);
+}
+
+.main {
+  flex: 1.5;
+  min-width: 0;
+}
+
+.top {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+
+.symbol {
+  font: 700 14px var(--font-mono);
+}
+
+.chipLong,
+.chipShort {
+  font: 700 8px var(--font-mono);
+  letter-spacing: 0.5px;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.chipLong {
+  color: var(--up);
+  background: var(--chip-up);
+}
+
+.chipShort {
+  color: var(--down);
+  background: var(--chip-down);
+}
+
+.basis {
+  font: 11px var(--font-mono);
+  color: var(--mut);
+  margin-top: 3px;
+}
+
+.col {
+  flex: 1;
+  text-align: right;
+}
+
+.last {
+  font: 700 13px var(--font-mono);
+}
+
+.lastLabel {
+  font: 9px var(--font-mono);
+  color: var(--mut);
+}
+
+.pnlUp {
+  font: 700 13px var(--font-mono);
+  color: var(--up);
+}
+
+.pnlDown {
+  font: 700 13px var(--font-mono);
+  color: var(--down);
+}
+
+.pnlUpSmall {
+  font: 700 11px var(--font-mono);
+  color: var(--up);
+}
+
+.pnlDownSmall {
+  font: 700 11px var(--font-mono);
+  color: var(--down);
+}
+
+.cashRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line2);
+}
+
+.cashLabel {
+  font: 700 12px var(--font-mono);
+  color: var(--ink2);
+}
+
+.cashValue {
+  font: 700 14px var(--font-mono);
+}

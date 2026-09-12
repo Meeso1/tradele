@@ -1,0 +1,116 @@
+.head {
+  padding: 18px 18px 8px;
+}
+
+.card,
+.cardHl {
+  margin: 0 14px 12px;
+  border-radius: 15px;
+  padding: 14px;
+}
+
+.card {
+  background: var(--paper2);
+  border: 1px solid var(--line);
+}
+
+.cardHl {
+  background: var(--hl);
+  box-shadow: inset 0 0 0 1px var(--hl-line);
+}
+
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.cardId {
+  font: 700 13px var(--font-mono);
+}
+
+.cardIdMuted {
+  font: 700 13px var(--font-mono);
+  color: var(--ink2);
+}
+
+.pnlUp {
+  font: 700 14px var(--font-mono);
+  color: var(--up);
+}
+
+.pnlDown {
+  font: 700 14px var(--font-mono);
+  color: var(--down);
+}
+
+.changesRow {
+  margin-top: 7px;
+  font: 11px var(--font-mono);
+  color: var(--ink2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.changesDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--down);
+}
+
+.cardOrders {
+  margin-top: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.orderRow,
+.orderRowMuted {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font: 11px var(--font-mono);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: var(--ink);
+}
+
+.orderRowMuted {
+  color: var(--mut);
+}
+
+.orderLabel,
+.orderLabelStrike {
+  flex: 1;
+}
+
+.orderLabelStrike {
+  text-decoration: line-through;
+}
+
+.orderChevron {
+  color: var(--mut);
+}
+
+.collapsedRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--line2);
+}
+
+.collapsedId {
+  font: 700 13px var(--font-mono);
+  color: var(--ink2);
+}
+
+.collapsedRow .pnlUp {
+  font-size: 13px;
+}

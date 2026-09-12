@@ -1,52 +1,76 @@
+/* Design tokens - the single source of truth for colors and fonts.
+   Components must reference these variables instead of hardcoding values. */
 :root {
-  color-scheme: light dark;
-  font-family: system-ui, sans-serif;
+  /* Warm-paper palette (from the Tradele design mockup) */
+  --bg: #e9e6de;
+  --paper: #f4f1ea;
+  --paper2: #fbf9f3;
+  --canvas: #d9d5cb;
+  --ink: #211f1b;
+  --ink2: #4d4840;
+  --mut: #8b8476;
+  --line: rgba(20, 16, 8, 0.13);
+  --line2: rgba(20, 16, 8, 0.07);
+  --up: #3f7d53;
+  --down: #b0503c;
+  --chip-up: #e6ede4;
+  --chip-down: #f1e3dc;
+  --hl: #f6edc9;
+  --hl-line: #e2ce93;
+  --warn: #9a6b12;
+  --warn-bg: #f4e7c8;
+  --warn-line: #dcc07f;
+  --grid: rgba(20, 16, 8, 0.08);
+  --chip-neutral: #ece8df;
+  --on-solid: #faf8f2;
+
+  /* Font roles:
+     - display: wordmark / branding
+     - serif:   large numeric hero values (prices, portfolio value)
+     - mono:    tickers, numbers, labels, chips
+     - ui:      everything else (buttons, body text) */
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-serif: "Newsreader", Georgia, serif;
+  --font-mono: "Space Mono", ui-monospace, monospace;
+  --font-ui: "Instrument Sans", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
 }
 
 body {
   margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
   display: flex;
   justify-content: center;
 }
 
-main {
+.shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  max-width: 32rem;
-  padding: 2rem 1rem;
+  max-width: 480px;
+  min-height: 100dvh;
+  background: var(--bg);
+  box-shadow:
+    0 0 0 1px rgba(20, 16, 8, 0.06),
+    0 8px 40px rgba(0, 0, 0, 0.08);
 }
 
-h1 {
-  margin-bottom: 0.25rem;
-}
-
-.tagline {
-  margin-top: 0;
-  opacity: 0.7;
-}
-
-.card {
-  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-  border-radius: 0.5rem;
-  padding: 1rem 1.25rem;
-}
-
-.card.error button {
-  margin-top: 0.5rem;
-}
-
-table {
-  border-collapse: collapse;
-  width: 100%;
-}
-
-th,
-td {
-  text-align: left;
-  padding: 0.25rem 0.5rem;
-  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
-}
-
-.user-id {
-  font-size: 0.85rem;
-  opacity: 0.7;
+button {
+  font-family: inherit;
 }

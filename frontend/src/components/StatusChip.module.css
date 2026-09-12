@@ -1,0 +1,64 @@
+.solid,
+.soft {
+  display: inline-block;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+/* Small solid chip used in history rows. */
+.solid {
+  font-size: 8px;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--on-solid);
+}
+
+/* Larger tinted tag used in the order details sheet. */
+.soft {
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.solid.filled {
+  background: var(--up);
+  border: 1px solid var(--up);
+}
+
+.solid.cancelled {
+  background: var(--mut);
+  border: 1px solid var(--mut);
+}
+
+.solid.no_funds {
+  background: var(--down);
+  border: 1px solid var(--down);
+}
+
+.solid.delisted {
+  background: var(--warn);
+  border: 1px solid var(--warn);
+}
+
+.soft.filled {
+  color: var(--up);
+  background: var(--chip-up);
+}
+
+.soft.cancelled {
+  color: var(--mut);
+  background: var(--chip-neutral);
+}
+
+.soft.no_funds {
+  color: var(--down);
+  background: var(--chip-down);
+}
+
+.soft.delisted {
+  color: var(--warn);
+  background: var(--warn-bg);
+}

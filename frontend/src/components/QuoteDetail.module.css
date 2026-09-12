@@ -1,0 +1,88 @@
+.quoteRow {
+  padding: 6px 18px 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.quoteSymbol {
+  font: 700 12px var(--font-mono);
+  color: var(--mut);
+  letter-spacing: 0.4px;
+}
+
+.quotePrice {
+  font: 500 36px/1 var(--font-serif);
+  margin-top: 7px;
+}
+
+.quoteChange {
+  text-align: right;
+}
+
+.changeAbs {
+  font: 700 14px var(--font-mono);
+}
+
+.changePct {
+  font: 700 12px var(--font-mono);
+  margin-top: 2px;
+}
+
+.up {
+  color: var(--up);
+}
+
+.down {
+  color: var(--down);
+}
+
+.chart {
+  padding: 16px 10px 4px;
+  min-height: 150px;
+}
+
+.timeframes {
+  display: flex;
+  gap: 6px;
+  padding: 8px 18px 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.timeframes::-webkit-scrollbar {
+  display: none;
+}
+
+.tf,
+.tfActive {
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 6px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.tfActive {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.tfLabel {
+  font: 700 11px var(--font-mono);
+}
+
+.tfInterval {
+  font: 9px var(--font-mono);
+  color: var(--mut);
+  margin-top: 1px;
+}
+
+.tfActive .tfInterval {
+  color: var(--paper);
+  opacity: 0.7;
+}

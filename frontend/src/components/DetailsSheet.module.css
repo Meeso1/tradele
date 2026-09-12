@@ -1,0 +1,81 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 16, 8, 0.4);
+}
+
+.sheet {
+  position: relative;
+  background: var(--paper2);
+  border-top-left-radius: 22px;
+  border-top-right-radius: 22px;
+  padding: 18px 18px calc(env(safe-area-inset-bottom, 0px) + 20px);
+  box-shadow: 0 -12px 44px rgba(0, 0, 0, 0.24);
+}
+
+.grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  margin: 0 auto 14px;
+}
+
+.titleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.close {
+  cursor: pointer;
+  font-size: 20px;
+  color: var(--mut);
+  line-height: 1;
+  background: none;
+  border: none;
+  padding: 0 2px;
+}
+
+.title {
+  font: 500 21px/1.1 var(--font-serif);
+  margin-bottom: 14px;
+}
+
+.field {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line2);
+}
+
+.fieldKey {
+  font: 12px var(--font-ui);
+  color: var(--mut);
+}
+
+.fieldValue {
+  font: 700 13px var(--font-mono);
+  text-align: right;
+}
+
+.reason {
+  margin-top: 13px;
+  padding: 11px 12px;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+  border-radius: 11px;
+  font: 12px/1.5 var(--font-ui);
+  color: var(--warn);
+}

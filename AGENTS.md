@@ -119,6 +119,8 @@ docker build -t tradele .
 ## Notes for agents
 
 - The React UI is in `frontend/`. The same FastAPI app serves both the API and the built frontend.
+  Frontend-specific conventions (design tokens, CSS Modules, mock data, component structure)
+  live in `frontend/AGENTS.md` - read it before making UI changes.
 - Don't commit `.venv/` or other local environment artifacts (already covered by `.gitignore`).
 - When adding dependencies, use `uv add <package>` (or `uv add --dev <package>` for dev-only
   tools) rather than editing `pyproject.toml` by hand, so `uv.lock` stays in sync.

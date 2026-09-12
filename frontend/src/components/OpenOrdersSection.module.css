@@ -1,0 +1,82 @@
+.sectionHead {
+  padding: 18px 18px 8px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sectionNote {
+  font: 11px var(--font-ui);
+  color: var(--mut);
+}
+
+.orderCard,
+.orderCardCancelling {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin: 0 14px 9px;
+  border-radius: 13px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.orderCard:last-child,
+.orderCardCancelling:last-child {
+  margin-bottom: 4px;
+}
+
+.orderCardCancelling {
+  background: var(--chip-down);
+  border-color: var(--hl-line);
+}
+
+.orderBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.orderTitle,
+.orderTitleCancelled {
+  font: 700 13px var(--font-mono);
+}
+
+.orderTitleCancelled {
+  text-decoration: line-through;
+  color: var(--mut);
+}
+
+.orderMeta {
+  font: 11px var(--font-mono);
+  color: var(--mut);
+  margin-top: 3px;
+}
+
+.orderMetaDown {
+  font: 11px var(--font-mono);
+  color: var(--down);
+  margin-top: 3px;
+}
+
+.cancelBtn {
+  flex: 0 0 auto;
+  padding: 8px 13px;
+  border: 1px solid var(--down);
+  color: var(--down);
+  background: transparent;
+  border-radius: 9px;
+  font: 600 11px var(--font-ui);
+  cursor: pointer;
+}
+
+.undoBtn {
+  flex: 0 0 auto;
+  padding: 8px 13px;
+  border: 1px solid var(--ink2);
+  color: var(--ink);
+  background: var(--paper);
+  border-radius: 9px;
+  font: 600 11px var(--font-ui);
+  cursor: pointer;
+}

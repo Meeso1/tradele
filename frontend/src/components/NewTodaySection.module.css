@@ -1,0 +1,61 @@
+.sectionHeadPlain {
+  padding: 18px 18px 8px;
+}
+
+.draftCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin: 0 14px 9px;
+  border-radius: 13px;
+  background: var(--paper2);
+  border: 1px solid var(--line);
+}
+
+.draftCard:last-child {
+  margin-bottom: 2px;
+}
+
+.orderBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.orderTitle {
+  font: 700 13px var(--font-mono);
+}
+
+.orderMeta {
+  font: 11px var(--font-mono);
+  color: var(--mut);
+  margin-top: 3px;
+}
+
+.draftActions {
+  display: flex;
+  gap: 8px;
+}
+
+.editLink,
+.removeLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: 13px var(--font-ui);
+  cursor: pointer;
+}
+
+.editLink {
+  color: var(--mut);
+}
+
+.removeLink {
+  color: var(--down);
+}
+
+.emptyNote {
+  margin: 0 18px;
+  font: 12px var(--font-ui);
+  color: var(--mut);
+}

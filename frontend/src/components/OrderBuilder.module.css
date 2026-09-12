@@ -1,0 +1,246 @@
+.header {
+  display: flex;
+  width: 100%;
+  padding: 16px 18px 8px;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: none;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.headerChevron {
+  font: 12px var(--font-mono);
+  color: var(--mut);
+}
+
+.headerAdd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 11px var(--font-mono);
+  color: var(--ink);
+}
+
+.panel {
+  margin: 0 14px;
+  padding: 14px;
+  border-radius: 15px;
+  background: var(--paper2);
+  border: 1px solid var(--line);
+}
+
+.typeTabs {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 9px;
+}
+
+.typeTab,
+.typeTabActive {
+  flex: 1;
+  text-align: center;
+  padding: 9px 0;
+  font: 600 12px var(--font-ui);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--ink2);
+}
+
+.typeTabActive {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.sides {
+  display: flex;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+
+.side,
+.sideBuyActive,
+.sideSellActive {
+  flex: 1;
+  text-align: center;
+  padding: 9px 0;
+  border-radius: 9px;
+  font: 600 12px var(--font-ui);
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink2);
+}
+
+.sideBuyActive {
+  font-weight: 700;
+  border-color: var(--up);
+  background: var(--chip-up);
+  color: var(--up);
+}
+
+.sideSellActive {
+  font-weight: 700;
+  border-color: var(--down);
+  background: var(--chip-down);
+  color: var(--down);
+}
+
+.amountRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.amountLabel {
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.5px;
+  color: var(--mut);
+  text-transform: uppercase;
+}
+
+.modes {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.mode,
+.modeActive {
+  padding: 6px 12px;
+  font: 600 11px var(--font-mono);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--ink2);
+}
+
+.modeActive {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.qtyBox {
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.qtyMain {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font: 700 18px var(--font-mono);
+}
+
+.qtyPrefix {
+  color: var(--ink);
+}
+
+.qtyInput {
+  width: 9ch;
+  padding: 0;
+  border: none;
+  background: none;
+  font: 700 18px var(--font-mono);
+  color: var(--ink);
+}
+
+.qtyInput:focus {
+  outline: none;
+}
+
+.qtyUnit {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--mut);
+}
+
+.qtyApprox {
+  font: 11px var(--font-mono);
+  color: var(--mut);
+}
+
+.percents {
+  display: flex;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.percent,
+.percentActive {
+  flex: 1;
+  text-align: center;
+  padding: 7px 0;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  font: 600 11px var(--font-mono);
+  color: var(--ink2);
+  cursor: pointer;
+}
+
+.percentActive {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.priceField {
+  margin-top: 11px;
+}
+
+.priceLabel {
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.5px;
+  color: var(--mut);
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.priceInput {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+  font: 700 15px var(--font-mono);
+  color: var(--ink);
+}
+
+.priceInput::placeholder {
+  color: var(--ink);
+  opacity: 1;
+}
+
+.priceInput:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.addOrder {
+  margin-top: 13px;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 11px;
+  background: var(--ink);
+  color: var(--paper);
+  font: 600 13px var(--font-ui);
+  cursor: pointer;
+}
+
+.addOrder:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

@@ -1,0 +1,92 @@
+.valueBlock {
+  padding: 12px 18px 4px;
+  border-top: 1px solid var(--line2);
+}
+
+.value {
+  font: 500 42px/1 var(--font-serif);
+  margin-top: 8px;
+}
+
+.sinceChip {
+  margin-top: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--hl);
+  padding: 6px 11px;
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 1px var(--hl-line);
+}
+
+.sinceAbs {
+  font: 700 12px var(--font-mono);
+  color: var(--up);
+}
+
+.sinceNote {
+  font: 600 11px var(--font-mono);
+  color: var(--ink2);
+}
+
+.chart {
+  padding: 14px 8px 2px;
+  min-height: 150px;
+}
+
+.changeRow {
+  padding: 2px 18px 6px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.changeUp {
+  font: 700 13px var(--font-mono);
+  color: var(--up);
+}
+
+.changeDown {
+  font: 700 13px var(--font-mono);
+  color: var(--down);
+}
+
+.changePct {
+  font: 600 11px var(--font-mono);
+  color: var(--ink2);
+}
+
+.changeNote {
+  font: 11px var(--font-mono);
+  color: var(--mut);
+}
+
+.ranges {
+  display: flex;
+  gap: 6px;
+  padding: 4px 18px 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ranges::-webkit-scrollbar {
+  display: none;
+}
+
+.range,
+.rangeActive {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  font: 700 11px var(--font-mono);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.rangeActive {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}

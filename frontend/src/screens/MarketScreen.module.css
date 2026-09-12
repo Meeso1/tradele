@@ -1,0 +1,22 @@
+.screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+.bottomSpacer {
+  height: 8px;
+}
+
+.footer {
+  flex: 0 0 auto;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}

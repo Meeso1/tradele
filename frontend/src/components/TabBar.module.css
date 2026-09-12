@@ -1,0 +1,24 @@
+.bar {
+  display: flex;
+  gap: 8px;
+  padding: 2px 40px calc(env(safe-area-inset-bottom, 0px) + 14px);
+}
+
+.tab,
+.tabActive {
+  flex: 1;
+  text-align: center;
+  padding: 7px 0 0;
+  background: none;
+  border: none;
+  border-top: 2px solid transparent;
+  font: 500 12px var(--font-ui);
+  color: var(--mut);
+  cursor: pointer;
+}
+
+.tabActive {
+  border-top-color: var(--ink);
+  font-weight: 600;
+  color: var(--ink);
+}

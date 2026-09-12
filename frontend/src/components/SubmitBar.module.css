@@ -1,0 +1,30 @@
+.row {
+  padding: 12px 16px 10px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.info {
+  flex: 1;
+}
+
+.summary {
+  font: 600 12px var(--font-ui);
+}
+
+.note {
+  font: 11px var(--font-mono);
+  color: var(--mut);
+  margin-top: 2px;
+}
+
+.submitBtn {
+  padding: 13px 22px;
+  border: none;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--paper);
+  font: 600 14px var(--font-ui);
+  cursor: pointer;
+}
