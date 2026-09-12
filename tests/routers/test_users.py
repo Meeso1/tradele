@@ -7,7 +7,7 @@ client = TestClient(app)
 
 
 def test_create_user_returns_a_persisted_id():
-    response = client.post("/users")
+    response = client.post("/api/users")
 
     assert response.status_code == 201
     user_id = response.json()["id"]

@@ -20,6 +20,10 @@ class SettingsService:
         self.log_dir: Path = Path(os.environ.get("TRADELE_LOG_DIR", "logs"))
         self.log_level: str = os.environ.get("TRADELE_LOG_LEVEL", "INFO")
 
+        self.frontend_dist_dir: Path = Path(
+            os.environ.get("TRADELE_FRONTEND_DIST", "frontend/dist")
+        )
+
         self.tradable_symbols: list[str] = [
             symbol.strip().upper()
             for symbol in os.environ.get(

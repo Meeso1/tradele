@@ -16,6 +16,7 @@ def isolated_runtime_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setenv("TRADELE_DB_PATH", str(tmp_path / "test.db"))
     monkeypatch.setenv("TRADELE_KEYS_DIR", str(tmp_path / "keys"))
     monkeypatch.setenv("TRADELE_LOG_DIR", str(tmp_path / "logs"))
+    monkeypatch.setenv("TRADELE_FRONTEND_DIST", str(tmp_path / "frontend-dist"))
 
     from app.container import container
 

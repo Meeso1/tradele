@@ -9,7 +9,7 @@ client = TestClient(app)
 
 
 def test_trigger_job_requires_authentication():
-    assert client.post("/scheduled-jobs/trigger?job_name=trade_execution").status_code == 401
+    assert client.post("/api/scheduled-jobs/trigger?job_name=trade_execution").status_code == 401
 
 
 def test_trigger_job_rejects_regular_user(
@@ -18,7 +18,7 @@ def test_trigger_job_rejects_regular_user(
     user_id = container.users.create()
 
     response = client.post(
-        "/scheduled-jobs/trigger?job_name=trade_execution",
+        "/api/scheduled-jobs/trigger?job_name=trade_execution",
         headers=auth_headers(user_id),
     )
 
@@ -27,7 +27,7 @@ def test_trigger_job_rejects_regular_user(
 
 def test_trigger_job_triggers_registered_job(service_auth_headers: dict[str, str]):
     response = client.post(
-        "/scheduled-jobs/trigger?job_name=trade_execution",
+        "/api/scheduled-jobs/trigger?job_name=trade_execution",
         headers=service_auth_headers,
     )
 
@@ -37,7 +37,7 @@ def test_trigger_job_triggers_registered_job(service_auth_headers: dict[str, str
 
 def test_trigger_job_unknown_job_returns_404(service_auth_headers: dict[str, str]):
     response = client.post(
-        "/scheduled-jobs/trigger?job_name=nonexistent",
+        "/api/scheduled-jobs/trigger?job_name=nonexistent",
         headers=service_auth_headers,
     )
 
@@ -46,6 +46,6 @@ def test_trigger_job_unknown_job_returns_404(service_auth_headers: dict[str, str
 
 
 def test_trigger_job_without_job_name_returns_422(service_auth_headers: dict[str, str]):
-    response = client.post("/scheduled-jobs/trigger", headers=service_auth_headers)
+    response = client.post("/api/scheduled-jobs/trigger", headers=service_auth_headers)
 
     assert response.status_code == 422

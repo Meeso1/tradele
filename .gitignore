@@ -9,6 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
+# Frontend
+node_modules/
+
 # Local runtime data
 *.db
 keys/

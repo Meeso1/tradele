@@ -14,7 +14,7 @@ def test_submit_trades_records_requested_trades(auth_headers: Callable[[str], di
     user_id = container.users.create()
 
     response = client.post(
-        "/trades",
+        "/api/trades",
         json={
             "trades": [
                 {"symbol": "AAPL", "kind": "limit_buy", "quantity": 1, "requested_price": 190.0}
@@ -35,7 +35,7 @@ def test_submit_trades_rejects_a_token_for_an_unknown_user(
     # The auth layer resolves the user (for per-user auth method checks), so
     # an unknown user is rejected there with 401, before the route's 404.
     response = client.post(
-        "/trades",
+        "/api/trades",
         json={
             "trades": [
                 {"symbol": "AAPL", "kind": "limit_buy", "quantity": 1, "requested_price": 190.0}
@@ -53,7 +53,7 @@ def test_submit_trades_returns_400_for_an_unknown_symbol(
     user_id = container.users.create()
 
     response = client.post(
-        "/trades",
+        "/api/trades",
         json={
             "trades": [
                 {
@@ -76,7 +76,7 @@ def test_submit_trades_accepts_a_market_order_without_a_requested_price(
     user_id = container.users.create()
 
     response = client.post(
-        "/trades",
+        "/api/trades",
         json={"trades": [{"symbol": "AAPL", "kind": "market_buy", "quantity": 1}]},
         headers=auth_headers(user_id),
     )
@@ -93,7 +93,7 @@ def test_submit_trades_returns_400_for_a_limit_order_without_a_requested_price(
     user_id = container.users.create()
 
     response = client.post(
-        "/trades",
+        "/api/trades",
         json={"trades": [{"symbol": "AAPL", "kind": "limit_buy", "quantity": 1}]},
         headers=auth_headers(user_id),
     )
@@ -107,7 +107,7 @@ def test_submit_trades_returns_409_when_already_submitted_today(
     user_id = container.users.create()
     headers = auth_headers(user_id)
     client.post(
-        "/trades",
+        "/api/trades",
         json={
             "trades": [
                 {"symbol": "AAPL", "kind": "limit_buy", "quantity": 1, "requested_price": 190.0}
@@ -117,7 +117,7 @@ def test_submit_trades_returns_409_when_already_submitted_today(
     )
 
     response = client.post(
-        "/trades",
+        "/api/trades",
         json={
             "trades": [
                 {"symbol": "MSFT", "kind": "limit_buy", "quantity": 1, "requested_price": 420.0}
@@ -131,7 +131,7 @@ def test_submit_trades_returns_409_when_already_submitted_today(
 
 def test_submit_trades_requires_authentication():
     response = client.post(
-        "/trades",
+        "/api/trades",
         json={
             "trades": [
                 {"symbol": "AAPL", "kind": "limit_buy", "quantity": 1, "requested_price": 190.0}
@@ -148,7 +148,7 @@ def test_get_trades_returns_requested_and_closed_trades(
     user_id = container.users.create()
     headers = auth_headers(user_id)
     submit_response = client.post(
-        "/trades",
+        "/api/trades",
         json={
             "trades": [
                 {"symbol": "AAPL", "kind": "limit_buy", "quantity": 1, "requested_price": 190.0},
@@ -166,7 +166,7 @@ def test_get_trades_returns_requested_and_closed_trades(
         "executed",
     )
 
-    response = client.get("/trades", headers=headers)
+    response = client.get("/api/trades", headers=headers)
 
     assert response.status_code == 200
     body = response.json()
@@ -179,12 +179,12 @@ def test_get_trades_rejects_a_token_for_an_unknown_user(
 ):
     # The auth layer resolves the user (for per-user auth method checks), so
     # an unknown user is rejected there with 401, before the route's 404.
-    response = client.get("/trades", headers=auth_headers("does-not-exist"))
+    response = client.get("/api/trades", headers=auth_headers("does-not-exist"))
 
     assert response.status_code == 401
 
 
 def test_get_trades_requires_authentication():
-    response = client.get("/trades")
+    response = client.get("/api/trades")
 
     assert response.status_code == 401

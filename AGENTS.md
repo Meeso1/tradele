@@ -8,6 +8,8 @@ trading.
 - **Language:** Python 3.13
 - **Package/dependency manager:** [`uv`](https://docs.astral.sh/uv/)
 - **Web framework:** [FastAPI](https://fastapi.tiangolo.com/) served by `uvicorn`
+- **Frontend:** React + TypeScript, built with [Vite](https://vite.dev/) (`frontend/`), served
+  by the same FastAPI app in production
 - **Testing:** `pytest` (+ FastAPI's `TestClient`, backed by `httpx`)
 - **Linting:** `ruff`
 
@@ -21,12 +23,24 @@ trading.
   - `app/container.py` — manual dependency wiring for services
   - `app/dependencies.py` — FastAPI `Depends` functions exposing container services to routes
 - `tests/` — pytest test suite, mirrors the `app/` structure
+- `frontend/` — React (Vite + TypeScript) UI; `npm run build` produces `frontend/dist/`, which
+  the FastAPI app serves at `/` (see `app/main.py`)
+- `Dockerfile` — multi-stage image build (frontend build, uv dependency install, slim runtime)
 
 ## Conventions
 
 - Add new routes as FastAPI routers under `app/routers/`, and include them in `app/main.py`.
   Prefer splitting by domain/feature once there's more than a couple of endpoints (e.g.
   `app/routers/game.py`).
+- All API routers are mounted under the `/api` prefix (applied in `app/main.py` at
+  `include_router(...)` time, not in the router modules themselves); `/health` stays at the root.
+- The SPA catch-all in `app/main.py` serves the built frontend from
+  `SettingsService.frontend_dist_dir` (`TRADELE_FRONTEND_DIST`, default `frontend/dist`),
+  falling back to `index.html` for client-side routes; unknown `/api/*` paths return a JSON 404.
+  If the frontend hasn't been built, the catch-all 404s and the app behaves as a pure API.
+- The frontend calls the API with relative `/api/...` URLs (same-origin, so no CORS is needed).
+  In development, the Vite dev server proxies `/api` to `http://localhost:8000` (see
+  `frontend/vite.config.ts`).
 - Use type hints everywhere; FastAPI relies on them for request/response validation.
 - Prefer Pydantic models for request/response schemas over raw dicts.
 - Keep business logic out of route handlers — route handlers should stay thin and delegate to
@@ -92,11 +106,19 @@ uv run pytest
 
 # Lint
 uv run ruff check .
+
+# Frontend (run from frontend/; requires Node 22+)
+npm install        # first time only
+npm run dev        # Vite dev server on :5173, proxies /api to the backend on :8000
+npm run build      # produces frontend/dist/, which FastAPI serves at /
+
+# Build the Docker image (builds the frontend and installs Python deps)
+docker build -t tradele .
 ```
 
 ## Notes for agents
 
-- This repo is backend-only. A separate frontend project consumes this API.
+- The React UI is in `frontend/`. The same FastAPI app serves both the API and the built frontend.
 - Don't commit `.venv/` or other local environment artifacts (already covered by `.gitignore`).
 - When adding dependencies, use `uv add <package>` (or `uv add --dev <package>` for dev-only
   tools) rather than editing `pyproject.toml` by hand, so `uv.lock` stays in sync.

@@ -14,7 +14,7 @@ client = TestClient(app)
 def test_get_symbols_returns_the_tradable_symbols(auth_headers: Callable[[str], dict[str, str]]):
     user_id = container.users.create()
 
-    response = client.get("/market/symbols", headers=auth_headers(user_id))
+    response = client.get("/api/market/symbols", headers=auth_headers(user_id))
 
     assert response.status_code == 200
     assert response.json() == container.settings.tradable_symbols
@@ -38,7 +38,7 @@ def test_get_prices_returns_a_price_for_every_symbol(
 
     monkeypatch.setattr(container.alpaca_client, "get_hourly_bars", _get_hourly_bars)
 
-    response = client.get("/market/prices", headers=auth_headers(user_id))
+    response = client.get("/api/market/prices", headers=auth_headers(user_id))
 
     assert response.status_code == 200
     prices = response.json()["prices"]
@@ -46,12 +46,12 @@ def test_get_prices_returns_a_price_for_every_symbol(
 
 
 def test_get_symbols_requires_authentication():
-    response = client.get("/market/symbols")
+    response = client.get("/api/market/symbols")
 
     assert response.status_code == 401
 
 
 def test_get_prices_requires_authentication():
-    response = client.get("/market/prices")
+    response = client.get("/api/market/prices")
 
     assert response.status_code == 401
