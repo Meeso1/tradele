@@ -13,6 +13,7 @@ from app.services.alpaca_market_data_client import AlpacaMarketDataClient
 from app.services.settings_service import SettingsService
 
 
+# TODO: Alpaca returns data from extended hours - 16h/day without weekends. That's mostly fine, but we need to handle that when caching, and distinguish that case from a symbol that no longer trades.
 class MarketDataService:
     """
     Provides current prices for the configured set of tradable symbols

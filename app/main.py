@@ -36,6 +36,7 @@ app.include_router(market.router, prefix=API_PREFIX)
 app.include_router(portfolio.router, prefix=API_PREFIX)
 app.include_router(trades.router, prefix=API_PREFIX)
 app.include_router(scheduled_jobs.router, prefix=API_PREFIX)
+# TODO: "metadata" endpoints - day number, hours until end of day, etc.
 
 
 # Catch unmatched `/api/...` routes and return 404

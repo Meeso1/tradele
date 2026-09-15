@@ -25,6 +25,7 @@ from app.services.trade_submission_service import (
 router = APIRouter(prefix="/trades", tags=["trades"], dependencies=[Depends(get_auth_context)])
 
 
+# TODO: also allow cancelling trades through this endpoint - also in a single, daily batch, together with submitting trades
 @router.post("", response_model=SubmitTradesResponse, status_code=201)
 def submit_trades(
     request: SubmitTradesRequest,
@@ -77,3 +78,6 @@ def get_trades(
             for trade in trade_repo.list_executed(auth_context.user_id)
         ],
     )
+
+# TODO: add endpoint returning 'changes since last submission' - should be db-side-computable now
+# TODO: add endpoint for checking if submission was made today.

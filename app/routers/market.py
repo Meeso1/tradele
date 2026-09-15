@@ -9,6 +9,7 @@ from app.models.market import HourlyDate
 router = APIRouter(prefix="/market", tags=["market"], dependencies=[Depends(get_auth_context)])
 
 
+# TODO: Maybe return some more metadata about symbols here?
 @router.get("/symbols", response_model=list[str])
 def get_symbols(settings: SettingsServiceDep) -> list[str]:
     """Return the configured set of symbols players can trade."""

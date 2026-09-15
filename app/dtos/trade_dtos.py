@@ -16,6 +16,7 @@ class TradeInput(BaseModel):
     quantity: float = Field(gt=0.001)
     # Required for limit/stop orders (enforced by TradeSubmissionService); ignored for market orders.
     requested_price: float | None = Field(default=None, gt=0)
+    # TODO: also allow to specify value instead of quantity. Validate that only one is specified. I guess we should also save that in db as a separate field
 
 
 class SubmitTradesRequest(BaseModel):
