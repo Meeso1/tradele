@@ -23,9 +23,7 @@ export function QuoteDetail({ quote }: QuoteDetailProps) {
     <section>
       <div className={styles.quoteRow}>
         <div>
-          <div className={styles.quoteSymbol}>
-            {quote.symbol} &middot; {quote.name}
-          </div>
+          <div className={styles.quoteSymbol}>{quote.symbol}</div>
           <div className={styles.quotePrice}>{formatUsd(quote.price)}</div>
         </div>
         <div className={styles.quoteChange}>

@@ -28,3 +28,8 @@
   font: 600 14px var(--font-ui);
   cursor: pointer;
 }
+
+.submitBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

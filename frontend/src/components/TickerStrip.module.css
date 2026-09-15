@@ -52,16 +52,3 @@
 .tickerChangeSelected {
   opacity: 0.85;
 }
-
-.tickerMore {
-  flex: 0 0 auto;
-  padding: 8px 12px;
-  border-radius: 11px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  min-width: 70px;
-  display: flex;
-  align-items: center;
-  color: var(--mut);
-  font: 600 11px var(--font-ui);
-}

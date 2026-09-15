@@ -6,17 +6,19 @@ import styles from "./OpenOrdersSection.module.css";
 
 interface OpenOrdersSectionProps {
   entries: readonly OpenOrderState[];
+  /** After the daily submission the book is locked - no cancels until tomorrow. */
+  locked: boolean;
   /** Mark an order as cancelling (or undo the cancellation). */
   onSetCancel: (id: string, cancelling: boolean) => void;
 }
 
 /** Open orders with cancel/undo actions (Market screen). */
-export function OpenOrdersSection({ entries, onSetCancel }: OpenOrdersSectionProps) {
+export function OpenOrdersSection({ entries, locked, onSetCancel }: OpenOrdersSectionProps) {
   return (
     <section>
       <div className={styles.sectionHead}>
         <SectionTitle>Open orders</SectionTitle>
-        <div className={styles.sectionNote}>cancel only</div>
+        {!locked && <div className={styles.sectionNote}>cancel only</div>}
       </div>
       {entries.map((entry) => {
         const order = entry.order;
@@ -38,23 +40,24 @@ export function OpenOrdersSection({ entries, onSetCancel }: OpenOrdersSectionPro
                 </div>
               )}
             </div>
-            {entry.cancelling ? (
-              <button
-                type="button"
-                className={styles.undoBtn}
-                onClick={() => onSetCancel(order.id, false)}
-              >
-                Undo
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={styles.cancelBtn}
-                onClick={() => onSetCancel(order.id, true)}
-              >
-                Cancel
-              </button>
-            )}
+            {!locked &&
+              (entry.cancelling ? (
+                <button
+                  type="button"
+                  className={styles.undoBtn}
+                  onClick={() => onSetCancel(order.id, false)}
+                >
+                  Undo
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.cancelBtn}
+                  onClick={() => onSetCancel(order.id, true)}
+                >
+                  Cancel
+                </button>
+              ))}
           </div>
         );
       })}

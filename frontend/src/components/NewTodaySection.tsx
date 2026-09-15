@@ -6,19 +6,14 @@ import styles from "./NewTodaySection.module.css";
 
 interface NewTodaySectionProps {
   drafts: readonly NewOrder[];
-  /** Show the "submitted" empty-state message instead of "no drafts yet". */
-  submitted: boolean;
+  /** After the daily submission drafts are cleared and editing is locked. */
+  locked: boolean;
   onEdit: (draft: NewOrder) => void;
   onRemove: (id: string) => void;
 }
 
 /** Drafted orders for today's set, with edit/remove actions. */
-export function NewTodaySection({
-  drafts,
-  submitted,
-  onEdit,
-  onRemove,
-}: NewTodaySectionProps) {
+export function NewTodaySection({ drafts, locked, onEdit, onRemove }: NewTodaySectionProps) {
   return (
     <section>
       <div className={styles.sectionHeadPlain}>
@@ -45,7 +40,7 @@ export function NewTodaySection({
       ))}
       {drafts.length === 0 && (
         <div className={styles.emptyNote}>
-          {submitted ? "Order set submitted — see you tomorrow." : "No drafts yet."}
+          {locked ? "Order set submitted — see you tomorrow." : "No drafts yet."}
         </div>
       )}
     </section>

@@ -38,6 +38,11 @@
   border: 1px solid var(--down);
 }
 
+.solid.error {
+  background: var(--down);
+  border: 1px solid var(--down);
+}
+
 .solid.delisted {
   background: var(--warn);
   border: 1px solid var(--warn);
@@ -54,6 +59,11 @@
 }
 
 .soft.no_funds {
+  color: var(--down);
+  background: var(--chip-down);
+}
+
+.soft.error {
   color: var(--down);
   background: var(--chip-down);
 }

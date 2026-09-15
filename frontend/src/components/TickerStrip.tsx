@@ -1,4 +1,4 @@
-import { MORE_SYMBOLS_COUNT, QUOTES } from "../mock/data";
+import { QUOTES } from "../mock/data";
 import { formatSignedPercent } from "../utils/format";
 import styles from "./TickerStrip.module.css";
 
@@ -36,7 +36,6 @@ export function TickerStrip({ selectedSymbol, onSelect }: TickerStripProps) {
           </button>
         );
       })}
-      <div className={styles.tickerMore}>+{MORE_SYMBOLS_COUNT} more</div>
     </div>
   );
 }

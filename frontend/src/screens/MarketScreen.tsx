@@ -24,35 +24,31 @@ const INITIAL_OPEN_ORDER_STATES: OpenOrderState[] = INITIAL_OPEN_ORDERS.map((ord
   cancelling: false,
 }));
 
-/** Open orders with their cancelling flags; submitting applies cancellations. */
-function useOpenOrders() {
+/**
+ * The day's order book: live open orders, unsubmitted drafts, and the locked
+ * state after the daily submission. Cancellations are local flags until the
+ * set is committed with the single daily submission (new drafts + cancels).
+ */
+function useOrderBook(symbol: string, onSelectSymbol: (symbol: string) => void) {
+  const [builderOpen, setBuilderOpen] = useState(true);
+  const [editing, setEditing] = useState<{ key: number; draft: DraftOrderInput } | null>(null);
   const [entries, setEntries] = useState(INITIAL_OPEN_ORDER_STATES);
+  const [drafts, setDrafts] = useState<NewOrder[]>(INITIAL_NEW_ORDERS);
+  const [locked, setLocked] = useState(false);
 
   const cancelCount = entries.filter((entry) => entry.cancelling).length;
+
   const setCancel = (id: string, cancelling: boolean) => {
     setEntries((prev) =>
       prev.map((entry) => (entry.order.id === id ? { ...entry, cancelling } : entry)),
     );
   };
-  const applySubmit = () => setEntries((prev) => prev.filter((entry) => !entry.cancelling));
-
-  return { entries, cancelCount, setCancel, applySubmit };
-}
-
-/** Order builder + drafted orders ("New today" set) as one cohesive unit. */
-function useDraftBuilder(symbol: string, onSelectSymbol: (symbol: string) => void) {
-  const [builderOpen, setBuilderOpen] = useState(true);
-  const [editing, setEditing] = useState<{ key: number; draft: DraftOrderInput } | null>(null);
-  const [drafts, setDrafts] = useState<NewOrder[]>(INITIAL_NEW_ORDERS);
-  const [submitted, setSubmitted] = useState(false);
 
   const addDraft = (draft: DraftOrderInput) => {
-    setSubmitted(false);
     setDrafts((prev) => [...prev, { id: `nt-${nextDraftId++}`, symbol, ...draft }]);
   };
 
   const removeDraft = (id: string) => {
-    setSubmitted(false);
     setDrafts((prev) => prev.filter((draft) => draft.id !== id));
   };
 
@@ -64,22 +60,22 @@ function useDraftBuilder(symbol: string, onSelectSymbol: (symbol: string) => voi
     setBuilderOpen(true);
   };
 
-  /** Clears the set on submit; drafts added afterwards start a fresh set. */
-  const clear = () => {
+  /**
+   * The single daily submission: promotes drafts to working orders, applies
+   * the pending cancellations, and locks the book until the next day.
+   */
+  const submit = () => {
+    setEntries((prev) => [
+      ...prev.filter((entry) => !entry.cancelling),
+      ...drafts.map((draft) => ({ order: draft, cancelling: false })),
+    ]);
     setDrafts([]);
-    setSubmitted(true);
+    setLocked(true);
   };
 
   return {
-    builderOpen,
-    setBuilderOpen,
-    editing,
-    drafts,
-    submitted,
-    addDraft,
-    removeDraft,
-    editDraft,
-    clear,
+    builderOpen, setBuilderOpen, editing, entries, drafts, locked, cancelCount,
+    setCancel, addDraft, removeDraft, editDraft, submit,
   };
 }
 
@@ -87,49 +83,41 @@ export function MarketScreen({ onTabChange }: MarketScreenProps) {
   const [selectedSymbol, setSelectedSymbol] = useState(QUOTES[0].symbol);
   const quote =
     QUOTES.find((candidate) => candidate.symbol === selectedSymbol) ?? QUOTES[0];
-  const { entries, cancelCount, setCancel, applySubmit } = useOpenOrders();
   const {
-    builderOpen,
-    setBuilderOpen,
-    editing,
-    drafts,
-    submitted,
-    addDraft,
-    removeDraft,
-    editDraft,
-    clear,
-  } = useDraftBuilder(selectedSymbol, setSelectedSymbol);
+    builderOpen, setBuilderOpen, editing, entries, drafts, locked, cancelCount,
+    setCancel, addDraft, removeDraft, editDraft, submit: commitOrderSet,
+  } = useOrderBook(selectedSymbol, setSelectedSymbol);
   const [warnDismissed, setWarnDismissed] = useState(false);
 
   const submit = () => {
-    applySubmit();
-    clear();
+    commitOrderSet();
     setWarnDismissed(false);
   };
 
   return (
     <div className={styles.screen}>
-      <AppHeader showMarketStatus />
+      <AppHeader />
 
       <div className={styles.content}>
         <TickerStrip selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
         <QuoteDetail quote={quote} />
-        <OrderBuilder
-          key={editing?.key ?? "fresh"}
-          quote={quote}
-          buyingPower={BUYING_POWER}
-          open={builderOpen}
-          onToggle={() => setBuilderOpen((prev) => !prev)}
-          onAdd={addDraft}
-          initial={editing?.draft}
-        />
-        <OpenOrdersSection entries={entries} onSetCancel={setCancel} />
-        <NewTodaySection
-          drafts={drafts}
-          submitted={submitted}
-          onEdit={editDraft}
-          onRemove={removeDraft}
-        />
+        {locked ? (
+          <div className={styles.lockedNote}>
+            Order set submitted &mdash; a new one unlocks tomorrow.
+          </div>
+        ) : (
+          <OrderBuilder
+            key={editing?.key ?? "fresh"}
+            quote={quote}
+            buyingPower={BUYING_POWER}
+            open={builderOpen}
+            onToggle={() => setBuilderOpen((prev) => !prev)}
+            onAdd={addDraft}
+            initial={editing?.draft}
+          />
+        )}
+        <OpenOrdersSection entries={entries} locked={locked} onSetCancel={setCancel} />
+        <NewTodaySection drafts={drafts} locked={locked} onEdit={editDraft} onRemove={removeDraft} />
         {!warnDismissed && (
           <MayNotFillWarning drafts={drafts} onDismiss={() => setWarnDismissed(true)} />
         )}
@@ -137,7 +125,12 @@ export function MarketScreen({ onTabChange }: MarketScreenProps) {
       </div>
 
       <div className={styles.footer}>
-        <SubmitBar draftsCount={drafts.length} cancelCount={cancelCount} onSubmit={submit} />
+        <SubmitBar
+          draftsCount={drafts.length}
+          cancelCount={cancelCount}
+          locked={locked}
+          onSubmit={submit}
+        />
         <TabBar active="market" onChange={onTabChange} />
       </div>
     </div>

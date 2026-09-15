@@ -3,20 +3,37 @@ import styles from "./SubmitBar.module.css";
 interface SubmitBarProps {
   draftsCount: number;
   cancelCount: number;
+  /** After the daily submission the set is locked until the next day. */
+  locked: boolean;
   onSubmit: () => void;
 }
 
 /** Order-set summary plus submit button, above the tab bar. */
-export function SubmitBar({ draftsCount, cancelCount, onSubmit }: SubmitBarProps) {
+export function SubmitBar({ draftsCount, cancelCount, locked, onSubmit }: SubmitBarProps) {
+  const nothingToCommit = draftsCount === 0 && cancelCount === 0;
   return (
     <div className={styles.row}>
       <div className={styles.info}>
-        <div className={styles.summary}>
-          {draftsCount} new &middot; {cancelCount} cancel
-        </div>
-        <div className={styles.note}>Locks at market close</div>
+        {locked ? (
+          <>
+            <div className={styles.summary}>Order set submitted</div>
+            <div className={styles.note}>A new set unlocks tomorrow</div>
+          </>
+        ) : (
+          <>
+            <div className={styles.summary}>
+              {draftsCount} new &middot; {cancelCount} cancel
+            </div>
+            <div className={styles.note}>Locks at end of day</div>
+          </>
+        )}
       </div>
-      <button type="button" className={styles.submitBtn} onClick={onSubmit}>
+      <button
+        type="button"
+        className={styles.submitBtn}
+        onClick={onSubmit}
+        disabled={locked || nothingToCommit}
+      >
         Submit &crarr;
       </button>
     </div>

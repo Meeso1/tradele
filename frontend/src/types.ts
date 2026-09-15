@@ -14,7 +14,12 @@ export type OrderSide = "buy" | "sell";
 export type QtyMode = "shares" | "value";
 
 /** Terminal statuses of a past (settled) order. */
-export type OrderStatus = "filled" | "cancelled" | "no_funds" | "delisted";
+export type OrderStatus =
+  | "filled"
+  | "cancelled"
+  | "error"
+  | "no_funds"
+  | "delisted";
 
 /**
  * Order quantity exactly as the user specified it. The client never converts
@@ -34,7 +39,6 @@ export interface Candle {
 
 export interface SymbolQuote {
   readonly symbol: string;
-  readonly name: string;
   readonly price: number;
   readonly changeAbs: number;
   readonly changePct: number;
@@ -89,29 +93,14 @@ export interface HistoryOrder {
   readonly details: OrderDetails;
 }
 
-/** One daily order set in the history list (e.g. NO.127 · Sep 11). */
-export interface HistorySet {
-  readonly id: string;
+/** All trades that were closed (executed, cancelled, ...) during one day. */
+export interface HistoryDay {
   readonly date: string;
-  readonly pnl: number;
-  /** Number of market moves since the user's last submit, if any. */
-  readonly changesSinceSubmit?: number;
   readonly orders: readonly HistoryOrder[];
-}
-
-/** A `HistorySet` plus mutable view state. */
-export interface HistorySetState {
-  readonly set: HistorySet;
-  /** Render as a compact summary row without expandable orders. */
-  collapsed: boolean;
 }
 
 export interface Holding {
   readonly symbol: string;
-  readonly side: "long" | "short";
   readonly shares: number;
-  readonly avgPrice: number;
   readonly lastPrice: number;
-  readonly pnlAbs: number;
-  readonly pnlPct: number;
 }

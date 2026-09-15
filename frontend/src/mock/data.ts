@@ -1,6 +1,6 @@
 import type {
   Candle,
-  HistorySet,
+  HistoryDay,
   Holding,
   NewOrder,
   OpenOrder,
@@ -80,20 +80,15 @@ function rescaleCandles(candles: Candle[], targetClose: number): Candle[] {
 /* Market                                                                      */
 /* -------------------------------------------------------------------------- */
 
-/** The daily puzzle number, e.g. "NO.128". */
-export const ISSUE_NUMBER = "NO.128";
-
-export const MARKET_STATUS = { open: true };
+/** The current game day number, e.g. day 128 of the game. */
+export const DAY_NUMBER = 128;
 
 export const QUOTES: SymbolQuote[] = [
-  { symbol: "HLIX", name: "Helix Labs", price: 142.3, changeAbs: 3.34, changePct: 2.4 },
-  { symbol: "VOLT", name: "Voltaic", price: 91.2, changeAbs: -1.1, changePct: -1.2 },
-  { symbol: "NMBS", name: "Nimbus Air", price: 60.86, changeAbs: 0.36, changePct: 0.6 },
-  { symbol: "ORCA", name: "Orca Freight", price: 51.3, changeAbs: -1.65, changePct: -3.1 },
+  { symbol: "HLIX", price: 142.3, changeAbs: 3.34, changePct: 2.4 },
+  { symbol: "VOLT", price: 91.2, changeAbs: -1.1, changePct: -1.2 },
+  { symbol: "NMBS", price: 60.86, changeAbs: 0.36, changePct: 0.6 },
+  { symbol: "ORCA", price: 51.3, changeAbs: -1.65, changePct: -3.1 },
 ];
-
-/** Extra watchlist symbols not shown individually ("+20 more" chip). */
-export const MORE_SYMBOLS_COUNT = 20;
 
 export interface Timeframe {
   readonly label: string;
@@ -157,14 +152,14 @@ export function seriesFor(range: PortfolioRange): number[] {
 }
 
 export const HOLDINGS: Holding[] = [
-  { symbol: "HLIX", side: "long", shares: 60, avgPrice: 128.4, lastPrice: 142.3, pnlAbs: 834, pnlPct: 10.8 },
-  { symbol: "VOLT", side: "short", shares: 40, avgPrice: 88.1, lastPrice: 91.2, pnlAbs: -124, pnlPct: -3.5 },
-  { symbol: "ORCA", side: "long", shares: 25, avgPrice: 54.0, lastPrice: 51.3, pnlAbs: -67, pnlPct: -5.0 },
+  { symbol: "HLIX", shares: 60, lastPrice: 142.3 },
+  { symbol: "VOLT", shares: 40, lastPrice: 91.2 },
+  { symbol: "ORCA", shares: 25, lastPrice: 51.3 },
 ];
 
-/** Shares currently held long for a symbol (0 if none). */
+/** Shares currently held for a symbol (0 if none). */
 export function heldShares(symbol: string): number {
-  const holding = HOLDINGS.find((candidate) => candidate.symbol === symbol && candidate.side === "long");
+  const holding = HOLDINGS.find((candidate) => candidate.symbol === symbol);
   return holding?.shares ?? 0;
 }
 
@@ -194,15 +189,12 @@ export const INITIAL_NEW_ORDERS: NewOrder[] = [
 ];
 
 /* -------------------------------------------------------------------------- */
-/* History + order details                                                     */
+/* History - trades grouped by the day they were closed                        */
 /* -------------------------------------------------------------------------- */
 
-export const HISTORY: HistorySet[] = [
+export const HISTORY: HistoryDay[] = [
   {
-    id: "NO.127",
     date: "Sep 11",
-    pnl: 980,
-    changesSinceSubmit: 2,
     orders: [
       {
         id: "h-1",
@@ -214,12 +206,11 @@ export const HISTORY: HistorySet[] = [
           reason: null,
           fields: [
             { label: "Type", value: "Limit buy" },
-            { label: "Symbol", value: "HLIX · Helix Labs" },
+            { label: "Symbol", value: "HLIX" },
             { label: "Requested", value: "60 shares" },
             { label: "Limit price", value: "$128.40" },
             { label: "Fill price", value: "$128.12" },
             { label: "Filled at", value: "11:00 · Sep 11" },
-            { label: "Order set", value: "NO.127" },
           ],
         },
       },
@@ -233,11 +224,10 @@ export const HISTORY: HistorySet[] = [
           reason: null,
           fields: [
             { label: "Type", value: "Market sell" },
-            { label: "Symbol", value: "ORCA · Orca Freight" },
+            { label: "Symbol", value: "ORCA" },
             { label: "Requested", value: "20 shares" },
             { label: "Fill price", value: "$53.10" },
             { label: "Filled at", value: "14:00 · Sep 11" },
-            { label: "Order set", value: "NO.127" },
           ],
         },
       },
@@ -251,20 +241,17 @@ export const HISTORY: HistorySet[] = [
           reason: "You cancelled this open order before the day was settled.",
           fields: [
             { label: "Type", value: "Limit buy" },
-            { label: "Symbol", value: "KLP · Kelp Foods" },
+            { label: "Symbol", value: "KLP" },
             { label: "Requested", value: "15 shares" },
             { label: "Limit price", value: "$19.20" },
             { label: "Status", value: "Cancelled" },
-            { label: "Order set", value: "NO.127" },
           ],
         },
       },
     ],
   },
   {
-    id: "NO.126",
     date: "Sep 10",
-    pnl: -210,
     orders: [
       {
         id: "h-4",
@@ -277,11 +264,10 @@ export const HISTORY: HistorySet[] = [
             "A limit sell in the same set already sold these shares, so nothing was left for the stop sell to close.",
           fields: [
             { label: "Type", value: "Stop sell" },
-            { label: "Symbol", value: "VOLT · Voltaic" },
+            { label: "Symbol", value: "VOLT" },
             { label: "Requested", value: "40 shares" },
             { label: "Stop price", value: "$84.00" },
             { label: "Trigger", value: "12:00 · Sep 10" },
-            { label: "Order set", value: "NO.126" },
           ],
         },
       },
@@ -295,14 +281,35 @@ export const HISTORY: HistorySet[] = [
           reason: "ASTR stopped trading (merger) before this order could fill.",
           fields: [
             { label: "Type", value: "Limit buy" },
-            { label: "Symbol", value: "ASTR · Astra Aero" },
+            { label: "Symbol", value: "ASTR" },
             { label: "Requested", value: "50 shares" },
             { label: "Limit price", value: "$12.00" },
-            { label: "Order set", value: "NO.126" },
+            { label: "Closed at", value: "18:00 · Sep 10" },
           ],
         },
       },
     ],
   },
-  { id: "NO.125", date: "Sep 9", pnl: 1530, orders: [] },
+  {
+    date: "Sep 9",
+    orders: [
+      {
+        id: "h-6",
+        status: "error",
+        label: "MARKET BUY 25 NMBS",
+        details: {
+          status: "error",
+          title: "Market buy · NMBS",
+          reason: "Execution failed due to a technical error — nothing was charged.",
+          fields: [
+            { label: "Type", value: "Market buy" },
+            { label: "Symbol", value: "NMBS" },
+            { label: "Requested", value: "25 shares" },
+            { label: "Status", value: "Error" },
+            { label: "Closed at", value: "21:00 · Sep 9" },
+          ],
+        },
+      },
+    ],
+  },
 ];

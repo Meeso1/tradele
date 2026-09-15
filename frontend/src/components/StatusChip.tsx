@@ -4,6 +4,7 @@ import styles from "./StatusChip.module.css";
 const LABELS: Record<OrderStatus, string> = {
   filled: "FILLED",
   cancelled: "CANCELLED",
+  error: "ERROR",
   no_funds: "NO FUNDS",
   delisted: "DELISTED",
 };
