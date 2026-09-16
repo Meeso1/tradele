@@ -58,6 +58,9 @@ body {
   justify-content: center;
 }
 
+/* Adaptive app shell: a full-width single column on mobile that widens into a
+   centered two-column-capable panel on desktop (screens split into columns
+   via their `.columns` wrappers - see the screen CSS modules). */
 .shell {
   position: relative;
   display: flex;
@@ -69,6 +72,12 @@ body {
   box-shadow:
     0 0 0 1px rgba(20, 16, 8, 0.06),
     0 8px 40px rgba(0, 0, 0, 0.08);
+}
+
+@media (min-width: 768px) {
+  .shell {
+    max-width: 1000px;
+  }
 }
 
 button {

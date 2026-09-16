@@ -100,27 +100,33 @@ export function MarketScreen({ onTabChange }: MarketScreenProps) {
 
       <div className={styles.content}>
         <TickerStrip selectedSymbol={selectedSymbol} onSelect={setSelectedSymbol} />
-        <QuoteDetail quote={quote} />
-        {locked ? (
-          <div className={styles.lockedNote}>
-            Order set submitted &mdash; a new one unlocks tomorrow.
+        <div className={styles.columns}>
+          <div className={styles.primary}>
+            <QuoteDetail quote={quote} />
           </div>
-        ) : (
-          <OrderBuilder
-            key={editing?.key ?? "fresh"}
-            quote={quote}
-            buyingPower={BUYING_POWER}
-            open={builderOpen}
-            onToggle={() => setBuilderOpen((prev) => !prev)}
-            onAdd={addDraft}
-            initial={editing?.draft}
-          />
-        )}
-        <OpenOrdersSection entries={entries} locked={locked} onSetCancel={setCancel} />
-        <NewTodaySection drafts={drafts} locked={locked} onEdit={editDraft} onRemove={removeDraft} />
-        {!warnDismissed && (
-          <MayNotFillWarning drafts={drafts} onDismiss={() => setWarnDismissed(true)} />
-        )}
+          <div className={styles.secondary}>
+            {locked ? (
+              <div className={styles.lockedNote}>
+                Order set submitted &mdash; a new one unlocks tomorrow.
+              </div>
+            ) : (
+              <OrderBuilder
+                key={editing?.key ?? "fresh"}
+                quote={quote}
+                buyingPower={BUYING_POWER}
+                open={builderOpen}
+                onToggle={() => setBuilderOpen((prev) => !prev)}
+                onAdd={addDraft}
+                initial={editing?.draft}
+              />
+            )}
+            <OpenOrdersSection entries={entries} locked={locked} onSetCancel={setCancel} />
+            <NewTodaySection drafts={drafts} locked={locked} onEdit={editDraft} onRemove={removeDraft} />
+            {!warnDismissed && (
+              <MayNotFillWarning drafts={drafts} onDismiss={() => setWarnDismissed(true)} />
+            )}
+          </div>
+        </div>
         <div className={styles.bottomSpacer} />
       </div>
 

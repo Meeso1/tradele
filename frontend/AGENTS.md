@@ -37,9 +37,12 @@ project conventions).
   font family in a component stylesheet. If the design needs a new color, add a token first.
 - **CSS Modules, co-located.** Each component/screen has a sibling `*.module.css`. Class
   names are camelCase. Avoid element/type selectors and avoid `!important`.
-- **Mobile-first.** The design targets a ~400px-wide mobile viewport; the app renders as a
-  centered `.shell` column (max 480px) on larger screens. Use `env(safe-area-inset-*)` for
-  header/footer padding instead of fixed notch allowances.
+- **Adaptive, mobile-first.** Styles target the ~400px mobile viewport first; a single
+  `768px` breakpoint (CSS media queries - no JS user-agent sniffing) switches to the desktop
+  layout: the `.shell` widens to 1000px and each screen splits into two columns via its
+  `.columns`/`.primary`/`.secondary` wrappers (mobile: same wrappers, stacked). Keep the
+  breakpoint value consistent across `index.css` and the screen modules. Use
+  `env(safe-area-inset-*)` for header/footer padding instead of fixed notch allowances.
 - **Components are functions** with named exports and an explicit `Props` interface; only
   `App` uses a default export. Interactive elements should be real `<button>`s (not
   click-handler `<div>`s) for keyboard/accessibility, styled to match the design.

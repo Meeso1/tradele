@@ -11,6 +11,22 @@
   overflow-y: auto;
 }
 
+/* Mobile: sections stack in one column. Desktop: value + chart + holdings on
+   the left, open orders + history on the right. */
+.columns {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 32px;
+    align-items: start;
+  }
+}
+
 .bottomSpacer {
   height: 8px;
 }

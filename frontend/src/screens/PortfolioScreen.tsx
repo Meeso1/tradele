@@ -23,10 +23,16 @@ export function PortfolioScreen({ onTabChange }: PortfolioScreenProps) {
       <AppHeader />
 
       <div className={styles.content}>
-        <PortfolioSummary />
-        <HoldingsList />
-        <OpenOrdersList orders={INITIAL_OPEN_ORDERS} onManage={() => onTabChange("market")} />
-        <HistoryList onSelectOrder={setDetails} />
+        <div className={styles.columns}>
+          <div className={styles.primary}>
+            <PortfolioSummary />
+            <HoldingsList />
+          </div>
+          <div className={styles.secondary}>
+            <OpenOrdersList orders={INITIAL_OPEN_ORDERS} onManage={() => onTabChange("market")} />
+            <HistoryList onSelectOrder={setDetails} />
+          </div>
+        </div>
         <div className={styles.bottomSpacer} />
       </div>
 
