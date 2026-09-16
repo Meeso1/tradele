@@ -14,6 +14,7 @@ HOUR_BEFORE = HourlyDate(day=date(2024, 1, 1), hour=9)
 def _fake_prices(symbol: str, low: float, high: float, open: float | None = None) -> MarketState:
     return MarketState(
         hour=HOUR,
+        market_open=True,
         prices={
             symbol: HourlyPriceData(
                 symbol=symbol,
@@ -28,16 +29,17 @@ def _fake_prices(symbol: str, low: float, high: float, open: float | None = None
 
 
 def _submit(user_id: str, kind: Kind, quantity: float, requested_price: float | None = None) -> str:
-    trade_ids = container.trades.submit(
+    result = container.trades.submit(
         user_id,
         [
             TradeRequest(
                 symbol="AAPL", kind=kind, quantity=quantity, requested_price=requested_price
             )
         ],
+        [],
         HOUR_BEFORE,
     )
-    return trade_ids[0]
+    return result.submitted_ids[0]
 
 
 def _set_last_hourly_update(user_id: str, hour: HourlyDate | None) -> None:
@@ -117,8 +119,11 @@ def test_execute_user_trades_at_hour_marks_symbol_unavailable_when_no_price_data
     user_id = container.users.create()
     _submit(user_id, "limit_buy", quantity=10, requested_price=190.0)
     _set_last_hourly_update(user_id, HOUR_BEFORE)
+    # Another symbol trades this hour (so the market is open), but AAPL has no bar.
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: MarketState(hour=HOUR, prices={})
+        container.market_data,
+        "get_prices",
+        lambda hour: _fake_prices("MSFT", 185.0, 195.0),
     )
 
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
@@ -306,6 +311,7 @@ def test_execute_user_trades_at_hour_marks_malformed_request_when_a_limit_trade_
             kind="limit_buy",
             requested_price=None,
             quantity=10,
+            value=None,
             requested_at=datetime.now(UTC),
             active_from=HOUR,
         )
@@ -341,3 +347,81 @@ def test_fastforward_all_users_executes_pending_trades_for_every_user(
 
     assert len(container.trade_repository.list_executed(user_a)) == 1
     assert len(container.trade_repository.list_executed(user_b)) == 1
+
+
+def test_execute_user_trades_at_hour_leaves_trades_active_when_the_market_is_closed(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    user_id = container.users.create()
+    _submit(user_id, "limit_buy", quantity=10, requested_price=190.0)
+    _set_last_hourly_update(user_id, HOUR_BEFORE)
+    monkeypatch.setattr(
+        container.market_data,
+        "get_prices",
+        lambda hour: MarketState(hour=HOUR, prices={}, market_open=False),
+    )
+
+    container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
+
+    assert len(container.trade_repository.list_active_in_order(user_id, HOUR)) == 1
+    assert container.trade_repository.list_executed(user_id) == []
+    # The portfolio must not be advanced past a closed hour, so the trades
+    # are retried in the next open hour.
+    assert container.portfolios.get_or_create(user_id).last_hourly_update == HOUR_BEFORE
+
+
+def test_execute_user_trades_at_hour_fills_a_value_based_market_buy_at_the_open_price(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    user_id = container.users.create()
+    trade_id = container.trades.submit(
+        user_id,
+        [TradeRequest(symbol="AAPL", kind="market_buy", value=1900.0)],
+        [],
+        HOUR_BEFORE,
+    ).submitted_ids[0]
+    _set_last_hourly_update(user_id, HOUR_BEFORE)
+    monkeypatch.setattr(
+        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
+    )
+
+    container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
+
+    executed = container.trade_repository.list_executed(user_id)
+    assert len(executed) == 1
+    assert executed[0].id == trade_id
+    assert executed[0].status == "executed"
+    assert executed[0].fill_price == 190.0
+
+    portfolio = container.portfolios.get_or_create(user_id)
+    assert portfolio.holdings["AAPL"] == 10
+    assert portfolio.cash == pytest.approx(100_000.0 - 1900.0)
+
+
+def test_execute_user_trades_at_hour_fills_a_value_based_market_sell_at_the_open_price(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    user_id = container.users.create()
+    _submit(user_id, "market_buy", quantity=10)
+    _set_last_hourly_update(user_id, HOUR_BEFORE)
+    monkeypatch.setattr(
+        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
+    )
+    container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
+
+    container.trades.submit(
+        user_id,
+        [TradeRequest(symbol="AAPL", kind="market_sell", value=950.0)],
+        [],
+        HOUR_BEFORE,
+    )
+    container.trade_execution.execute_user_trades_at_hour(user_id, HourlyDate.next(HOUR))
+
+    executed = container.trade_repository.list_executed(user_id)
+    assert len(executed) == 2
+    assert executed[1].status == "executed"
+    assert executed[1].fill_price == 190.0
+
+    portfolio = container.portfolios.get_or_create(user_id)
+    assert portfolio.holdings["AAPL"] == 5
+    assert portfolio.cash == pytest.approx(100_000.0 - 5 * 190.0)

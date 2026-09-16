@@ -9,3 +9,4 @@ from app.models.market import HourlyPriceData
 
 class PricesResponse(BaseModel):
     prices: dict[str, HourlyPriceData]
+    market_open: bool

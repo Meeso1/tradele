@@ -13,7 +13,6 @@ from app.services.alpaca_market_data_client import AlpacaMarketDataClient
 from app.services.settings_service import SettingsService
 
 
-# TODO: Alpaca returns data from extended hours - 16h/day without weekends. That's mostly fine, but we need to handle that when caching, and distinguish that case from a symbol that no longer trades.
 class MarketDataService:
     """
     Provides current prices for the configured set of tradable symbols
@@ -48,7 +47,6 @@ class MarketDataService:
         self._settings = settings
         self._logger = logger
 
-    # TODO: Alpaca has a 15-minute delay - so trades should be executed after that time.
     def get_prices(self, time: HourlyDate) -> MarketState:
         """Return prices for all tradable symbols for (time, time + 1 hour) window."""
         symbols = self._settings.tradable_symbols
@@ -71,4 +69,4 @@ class MarketDataService:
         prices = {
             symbol: price_data for symbol, price_data in all_results.items() if price_data is not None
         }
-        return MarketState(hour=time, prices=prices)
+        return MarketState(hour=time, prices=prices, market_open=any(prices))

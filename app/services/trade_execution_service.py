@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 import logging
+import math
 from typing import Literal
 
 from pydantic.dataclasses import dataclass
@@ -66,7 +67,7 @@ class TradeExecutionService:
     def fastforward_user_trades_to_current_hour(self, user_id: str) -> None:
         """Fastforward all active trades for the given user to the current hour."""
         # Start updates from the first hour after the last portfolio update
-        current_hour = HourlyDate.current()
+        current_hour = HourlyDate.current_with_available_market_data()
         starting_hour = HourlyDate.next(last_portfolio_update) \
             if (last_portfolio_update := self._portfolio_repo.get_or_create(user_id).last_hourly_update) is not None \
             else None
@@ -92,6 +93,10 @@ class TradeExecutionService:
             return
 
         pricing_data = self._market_data_service.get_prices(hour)
+        if not pricing_data.market_open:
+            self._logger.info("Skipping trades update for hour %s for user %s - market is closed", hour, user_id)
+            return
+
         state = PortfolioState(cash=portfolio.cash, holdings=portfolio.holdings)
 
         executed_trades: list[tuple[ActiveTrade, TradeExecutionDetails]] = []
@@ -126,32 +131,25 @@ class TradeExecutionService:
         """Attempt to execute a single trade against the given hourly window."""
         match trade.kind:
             case "market_buy":
-                return self._try_execute_market_buy(trade.symbol, trade.quantity, pricing_data, portfolio)
+                return self._try_execute_market_buy(trade.symbol, trade.quantity, trade.value, pricing_data, portfolio)
             case "market_sell":
-                return self._try_execute_market_sell(trade.symbol, trade.quantity, pricing_data, portfolio)
+                return self._try_execute_market_sell(trade.symbol, trade.quantity, trade.value, pricing_data, portfolio)
             case "limit_buy":
-                if trade.requested_price is None:
-                    return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
-                return self._try_execute_limit_buy(trade.symbol, trade.requested_price, trade.quantity, pricing_data, portfolio)
+                return self._try_execute_limit_buy(trade.symbol, trade.requested_price, trade.quantity, trade.value, pricing_data, portfolio)
             case "limit_sell":
-                if trade.requested_price is None:
-                    return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
-                return self._try_execute_limit_sell(trade.symbol, trade.requested_price, trade.quantity, pricing_data, portfolio)
+                return self._try_execute_limit_sell(trade.symbol, trade.requested_price, trade.quantity, trade.value, pricing_data, portfolio)
             case "stop_buy":
-                if trade.requested_price is None:
-                    return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
-                return self._try_execute_stop_buy(trade.symbol, trade.requested_price, trade.quantity, pricing_data, portfolio)
+                return self._try_execute_stop_buy(trade.symbol, trade.requested_price, trade.quantity, trade.value, pricing_data, portfolio)
             case "stop_sell":
-                if trade.requested_price is None:
-                    return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
-                return self._try_execute_stop_sell(trade.symbol, trade.requested_price, trade.quantity, pricing_data, portfolio)
+                return self._try_execute_stop_sell(trade.symbol, trade.requested_price, trade.quantity, trade.value, pricing_data, portfolio)
             case _:  # pyright: ignore[reportUnnecessaryComparison]
                 raise ValueError(f"Unknown trade kind: {trade.kind}") # pyright: ignore[reportUnreachable]
 
     def _try_execute_market_buy(
         self,
         symbol: str,
-        quantity: float,
+        quantity: float | None,
+        value: float | None,
         prices: MarketState,
         portfolio: PortfolioState,
     ) -> tuple[TradeExecutionDetails | None, PortfolioState]:
@@ -160,10 +158,16 @@ class TradeExecutionService:
 
         Returns a tuple of (result, updated_portfolio).
         """
+        if not self._is_quantity_and_value_valid(quantity, value):
+            return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
+
         price_data = prices.prices.get(symbol, None)
         if price_data is None:
             self._logger.error(f"No price data for symbol: {symbol} - it may no longer be tradable")
             return TradeExecutionDetails(result="symbol_unavailable", fill_price=None), portfolio # Trade should be closed - all other windows will also fail
+
+        if quantity is None:
+            quantity = self._value_to_quantity(value, price_data.open, "buy")  # pyright: ignore[reportArgumentType]
 
         # Market buy is executed at the beginning of the first available hourly window
         total_price = quantity * price_data.open
@@ -181,7 +185,8 @@ class TradeExecutionService:
     def _try_execute_market_sell(
         self,
         symbol: str,
-        quantity: float,
+        quantity: float | None,
+        value: float | None,
         prices: MarketState,
         portfolio: PortfolioState,
     ) -> tuple[TradeExecutionDetails | None, PortfolioState]:
@@ -194,6 +199,12 @@ class TradeExecutionService:
         if price_data is None:
             self._logger.error(f"No price data for symbol: {symbol} - it may no longer be tradable")
             return TradeExecutionDetails(result="symbol_unavailable", fill_price=None), portfolio # Trade should be closed - all other windows will also fail
+
+        if not self._is_quantity_and_value_valid(quantity, value):
+            return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
+
+        if quantity is None:
+            quantity = self._value_to_quantity(value, price_data.open, "sell")  # pyright: ignore[reportArgumentType]
 
         # Market sell is executed at the beginning of the first available hourly window
         held_quantity = portfolio.holdings.get(symbol, 0)
@@ -215,8 +226,9 @@ class TradeExecutionService:
     def _try_execute_limit_buy(
         self,
         symbol: str,
-        requested_price: float,
-        quantity: float,
+        requested_price: float | None,
+        quantity: float | None,
+        value: float | None,
         prices: MarketState,
         portfolio: PortfolioState,
     ) -> tuple[TradeExecutionDetails | None, PortfolioState]:
@@ -225,6 +237,12 @@ class TradeExecutionService:
 
         Returns a tuple of (result, updated_portfolio).
         """
+        if not self._is_quantity_and_value_valid(quantity, value):
+            return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
+
+        if requested_price is None:
+            return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
+        
         price_data = prices.prices.get(symbol, None)
         if price_data is None:
             self._logger.error(f"No price data for symbol: {symbol} - it may no longer be tradable")
@@ -233,6 +251,9 @@ class TradeExecutionService:
         if price_data.low > requested_price:
             self._logger.debug(f"Low price ({price_data.low} @ {price_data.starting_hour}) is above requested price ({requested_price}) - limit buy not executed")
             return None, portfolio
+
+        if quantity is None:
+            quantity = self._value_to_quantity(value, requested_price, "buy")  # pyright: ignore[reportArgumentType]
 
         total_price = quantity * requested_price
         if portfolio.cash < total_price:
@@ -249,8 +270,9 @@ class TradeExecutionService:
     def _try_execute_limit_sell(
         self,
         symbol: str,
-        requested_price: float,
-        quantity: float,
+        requested_price: float | None,
+        quantity: float | None,
+        value: float | None,
         prices: MarketState,
         portfolio: PortfolioState,
     ) -> tuple[TradeExecutionDetails | None, PortfolioState]:
@@ -259,6 +281,12 @@ class TradeExecutionService:
 
         Returns a tuple of (success, updated_portfolio).
         """
+        if not self._is_quantity_and_value_valid(quantity, value):
+            return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
+
+        if requested_price is None:
+            return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
+
         price_data = prices.prices.get(symbol, None)
         if price_data is None:
             self._logger.error(f"No price data for symbol: {symbol} - it may no longer be tradable")
@@ -267,6 +295,9 @@ class TradeExecutionService:
         if price_data.high < requested_price:
             self._logger.debug(f"High price ({price_data.high} @ {price_data.starting_hour}) is below requested price ({requested_price}) - sell not executed")
             return None, portfolio # Trade stays open
+
+        if quantity is None:
+            quantity = self._value_to_quantity(value, requested_price, "sell")  # pyright: ignore[reportArgumentType]
 
         held_quantity = portfolio.holdings.get(symbol, 0)
         if held_quantity < quantity:
@@ -287,8 +318,9 @@ class TradeExecutionService:
     def _try_execute_stop_buy(
         self,
         symbol: str,
-        requested_price: float,
-        quantity: float,
+        requested_price: float | None,
+        quantity: float | None,
+        value: float | None,
         prices: MarketState,
         portfolio: PortfolioState,
     ) -> tuple[TradeExecutionDetails | None, PortfolioState]:
@@ -297,6 +329,12 @@ class TradeExecutionService:
 
         Returns a tuple of (result, updated_portfolio).
         """
+        if not self._is_quantity_and_value_valid(quantity, value):
+            return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
+
+        if requested_price is None:
+            return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
+        
         price_data = prices.prices.get(symbol, None)
         if price_data is None:
             self._logger.error(f"No price data for symbol: {symbol} - it may no longer be tradable")
@@ -305,6 +343,9 @@ class TradeExecutionService:
         if price_data.high < requested_price:
             self._logger.debug(f"High price ({price_data.high} @ {price_data.starting_hour}) is below requested price ({requested_price}) - stop buy not executed")
             return None, portfolio
+
+        if quantity is None:
+            quantity = self._value_to_quantity(value, requested_price, "buy")  # pyright: ignore[reportArgumentType]
 
         # Stop buy will execute immediately (at open) if the price is above the requested price.
         # Otherwise, it will execute when the price reaches the requested price.
@@ -324,8 +365,9 @@ class TradeExecutionService:
     def _try_execute_stop_sell(
         self,
         symbol: str,
-        requested_price: float,
-        quantity: float,
+        requested_price: float | None,
+        quantity: float | None,
+        value: float | None,
         prices: MarketState,
         portfolio: PortfolioState,
     ) -> tuple[TradeExecutionDetails | None, PortfolioState]:
@@ -334,6 +376,12 @@ class TradeExecutionService:
 
         Returns a tuple of (result, updated_portfolio).
         """
+        if not self._is_quantity_and_value_valid(quantity, value):
+            return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
+
+        if requested_price is None:
+            return TradeExecutionDetails(result="malformed_request", fill_price=None), portfolio
+        
         price_data = prices.prices.get(symbol, None)
         if price_data is None:
             self._logger.error(f"No price data for symbol: {symbol} - it may no longer be tradable")
@@ -342,6 +390,9 @@ class TradeExecutionService:
         if price_data.low > requested_price:
             self._logger.debug(f"Low price ({price_data.low} @ {price_data.starting_hour}) is above requested price ({requested_price}) - stop sell not executed")
             return None, portfolio
+
+        if quantity is None:
+            quantity = self._value_to_quantity(value, requested_price, "sell")  # pyright: ignore[reportArgumentType]
 
         # Stop sell will execute immediately (at open) if the price is below the requested price.
         # Otherwise, it will execute when the price reaches the requested price.
@@ -377,4 +428,21 @@ class TradeExecutionService:
                 return "malformed_request"
             case _:  # pyright: ignore[reportUnnecessaryComparison]
                 raise ValueError(f"Unknown result: {result}")  # pyright: ignore[reportUnreachable]
-            
+
+    @staticmethod
+    def _is_quantity_and_value_valid(quantity: float | None, value: float | None) -> bool:
+        if quantity is None and value is None:
+            return False
+        if quantity is not None and value is not None:
+            return False
+        return True
+
+    @staticmethod
+    def _value_to_quantity(value: float, price: float, side: Literal["buy", "sell"]) -> float:
+        base_quantity = value / price
+        if side == "buy":
+            # Round down for buy orders - required value must not exceed the requested value
+            return int(base_quantity * 1000) / 1000
+        if side == "sell":
+            # Round up for sell orders - acquired value must not be less than the requested value
+            return math.ceil(base_quantity * 1000) / 1000

@@ -10,6 +10,7 @@ from app.dependencies import (
 )
 from app.dtos.trade_dtos import (
     ActiveTradeResponse,
+    HasSubmittedTodayResponse,
     HistoricalTradeResponse,
     SubmitTradesRequest,
     SubmitTradesResponse,
@@ -25,7 +26,6 @@ from app.services.trade_submission_service import (
 router = APIRouter(prefix="/trades", tags=["trades"], dependencies=[Depends(get_auth_context)])
 
 
-# TODO: also allow cancelling trades through this endpoint - also in a single, daily batch, together with submitting trades
 @router.post("", response_model=SubmitTradesResponse, status_code=201)
 def submit_trades(
     request: SubmitTradesRequest,
@@ -42,20 +42,21 @@ def submit_trades(
             symbol=trade.symbol,
             kind=trade.kind,
             quantity=trade.quantity,
+            value=trade.value,
             requested_price=trade.requested_price,
         )
-        for trade in request.trades
+        for trade in request.new_trades
     ]
     date = HourlyDate.current()
 
     try:
-        trade_ids = trade_service.submit(auth_context.user_id, trade_requests, date)
+        result = trade_service.submit(auth_context.user_id, trade_requests, request.trades_to_cancel, date)
     except TradesAlreadySubmittedError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     except TradeValidationError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
-    return SubmitTradesResponse(trade_ids=trade_ids)
+    return SubmitTradesResponse(submitted_ids=result.submitted_ids, cancelled_ids=result.cancelled_ids)
 
 
 @router.get("", response_model=TradesResponse)
@@ -79,5 +80,20 @@ def get_trades(
         ],
     )
 
-# TODO: add endpoint returning 'changes since last submission' - should be db-side-computable now
-# TODO: add endpoint for checking if submission was made today.
+@router.get("/has-submitted-today", response_model=HasSubmittedTodayResponse)
+def has_submitted_today(
+    auth_context: AuthContextDep,
+    trade_repo: TradeRepositoryDep,
+) -> HasSubmittedTodayResponse:
+    return HasSubmittedTodayResponse(has_submitted_today=trade_repo.exists_for_date(auth_context.user_id, HourlyDate.current()))
+
+
+@router.get("/changed-since-last-submission", response_model=list[HistoricalTradeResponse])
+def list_changed_since_last_submission(
+    auth_context: AuthContextDep,
+    trade_repo: TradeRepositoryDep,
+) -> list[HistoricalTradeResponse]:
+    return [
+        HistoricalTradeResponse.from_model(trade)
+        for trade in trade_repo.list_changed_since_last_submission(auth_context.user_id)
+    ]

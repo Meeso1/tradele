@@ -13,18 +13,21 @@ from app.models.trade import ActiveTrade, HistoricalTrade, InactiveTradeStatus, 
 class TradeInput(BaseModel):
     symbol: str
     kind: Kind
-    quantity: float = Field(gt=0.001)
+    # Either quantity or value must be specified, but not both.
+    quantity: float | None = Field(default=None, gt=0.001)
+    value: float | None = Field(default=None, gt=0.001)
     # Required for limit/stop orders (enforced by TradeSubmissionService); ignored for market orders.
     requested_price: float | None = Field(default=None, gt=0)
-    # TODO: also allow to specify value instead of quantity. Validate that only one is specified. I guess we should also save that in db as a separate field
 
 
 class SubmitTradesRequest(BaseModel):
-    trades: list[TradeInput]
+    new_trades: list[TradeInput]
+    trades_to_cancel: list[str]
 
 
 class SubmitTradesResponse(BaseModel):
-    trade_ids: list[str]
+    submitted_ids: list[str]
+    cancelled_ids: list[str]
 
 
 class ActiveTradeResponse(BaseModel):
@@ -33,7 +36,8 @@ class ActiveTradeResponse(BaseModel):
     symbol: str
     kind: Kind
     requested_price: float | None
-    quantity: float
+    quantity: float | None
+    value: float | None
     requested_at: datetime
     active_from: HourlyDate
 
@@ -46,6 +50,7 @@ class ActiveTradeResponse(BaseModel):
             kind=trade.kind,
             requested_price=trade.requested_price,
             quantity=trade.quantity,
+            value=trade.value,
             requested_at=trade.requested_at,
             active_from=trade.active_from,
         )
@@ -57,7 +62,8 @@ class HistoricalTradeResponse(BaseModel):
     symbol: str
     kind: Kind
     requested_price: float | None
-    quantity: float
+    quantity: float | None
+    value: float | None
     requested_at: datetime
     active_from: HourlyDate
     fill_price: float | None
@@ -74,6 +80,7 @@ class HistoricalTradeResponse(BaseModel):
             kind=trade.kind,
             requested_price=trade.requested_price,
             quantity=trade.quantity,
+            value=trade.value,
             requested_at=trade.requested_at,
             active_from=trade.active_from,
             fill_price=trade.fill_price,
@@ -86,3 +93,7 @@ class HistoricalTradeResponse(BaseModel):
 class TradesResponse(BaseModel):
     requested: list[ActiveTradeResponse]
     closed: list[HistoricalTradeResponse]
+
+
+class HasSubmittedTodayResponse(BaseModel):
+    has_submitted_today: bool

@@ -46,9 +46,9 @@ class TradeRepository:
             conn.execute(
                 """
                 INSERT INTO active_trades
-                    (id, user_id, symbol, kind, requested_price, quantity, requested_at,
+                    (id, user_id, symbol, kind, requested_price, quantity, value, requested_at,
                      active_from_day, active_from_hour)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     trade.id,
@@ -57,11 +57,85 @@ class TradeRepository:
                     trade.kind,
                     trade.requested_price,
                     trade.quantity,
+                    trade.value,
                     trade.requested_at.isoformat(),
                     trade.active_from.day.isoformat(),
                     trade.active_from.hour,
                 ),
             )
+
+    def cancel_if_active(self, user_id: str, trade_id: str, closed_at: datetime, closed_at_hour: HourlyDate) -> bool:
+        """Move a trade from `active_trades` to `historical_trades` with status `cancelled`.
+
+        Returns True if the trade existed, belonged to `user_id`, and was
+        cancelled; False otherwise (unknown id, someone else's trade, or
+        already closed).
+        """
+        with self._database.connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO historical_trades
+                    (id, user_id, symbol, kind, requested_price, quantity, value, requested_at,
+                        active_from_day, active_from_hour, fill_price, closed_at,
+                        closed_at_hour_day, closed_at_hour_hour, status)
+                SELECT id, user_id, symbol, kind, requested_price, quantity, value, requested_at,
+                        active_from_day, active_from_hour, NULL, ?, ?, ?, 'cancelled'
+                FROM active_trades WHERE id = ? AND user_id = ?
+                """,
+                (
+                    closed_at.isoformat(),
+                    closed_at_hour.day.isoformat(),
+                    closed_at_hour.hour,
+                    trade_id,
+                    user_id,
+                ),
+            )
+            if cursor.rowcount == 0:
+                return False
+            conn.execute("DELETE FROM active_trades WHERE id = ? AND user_id = ?", (trade_id, user_id))
+        return True
+
+    def move_to_executed(
+        self,
+        trade_id: str,
+        fill_price: float | None,
+        closed_at: datetime,
+        closed_at_hour: HourlyDate,
+        status: InactiveTradeStatus,
+    ) -> None:
+        """Move a trade from `active_trades` to `historical_trades`, filling in the closing fields."""
+        with self._database.connect() as conn:
+            row = conn.execute("SELECT * FROM active_trades WHERE id = ?", (trade_id,)).fetchone()
+            if row is None:
+                raise ValueError(f"No active trade with id {trade_id}")
+
+            conn.execute(
+                """
+                INSERT INTO historical_trades
+                    (id, user_id, symbol, kind, requested_price, quantity, value, requested_at,
+                        active_from_day, active_from_hour, fill_price, closed_at,
+                        closed_at_hour_day, closed_at_hour_hour, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    row["id"],
+                    row["user_id"],
+                    row["symbol"],
+                    row["kind"],
+                    row["requested_price"],
+                    row["quantity"],
+                    row["value"],
+                    row["requested_at"],
+                    row["active_from_day"],
+                    row["active_from_hour"],
+                    fill_price,
+                    closed_at.isoformat(),
+                    closed_at_hour.day.isoformat(),
+                    closed_at_hour.hour,
+                    status,
+                ),
+            )
+            conn.execute("DELETE FROM active_trades WHERE id = ?", (trade_id,))
 
     def list_requested(self, user_id: str) -> list[ActiveTrade]:
         with self._database.connect() as conn:
@@ -93,46 +167,31 @@ class TradeRepository:
             ).fetchall()
         return [self._historical_trade_from_row(row) for row in rows]
 
-    def move_to_executed(
-        self,
-        trade_id: str,
-        fill_price: float | None,
-        closed_at: datetime,
-        closed_at_hour: HourlyDate,
-        status: InactiveTradeStatus,
-    ) -> None:
-        """Move a trade from `active_trades` to `historical_trades`, filling in the closing fields."""
-        with self._database.connect() as conn:
-            row = conn.execute("SELECT * FROM active_trades WHERE id = ?", (trade_id,)).fetchone()
-            if row is None:
-                raise ValueError(f"No active trade with id {trade_id}")
+    def list_changed_since_last_submission(self, user_id: str) -> list[HistoricalTrade]:
+        """Return the user's closed trades that closed after their most recent submission.
 
-            conn.execute(
+        The last submission time is inferred as the newest `requested_at`
+        across the user's active and historical trades. `requested_at` is
+        preserved when a trade moves to `historical_trades`, so the
+        reference point survives the submission's trades being closed.
+        """
+        with self._database.connect() as conn:
+            rows = conn.execute(
                 """
-                INSERT INTO historical_trades
-                    (id, user_id, symbol, kind, requested_price, quantity, requested_at,
-                     active_from_day, active_from_hour, fill_price, closed_at,
-                     closed_at_hour_day, closed_at_hour_hour, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                SELECT * FROM historical_trades
+                WHERE user_id = ?
+                    AND closed_at > (
+                        SELECT MAX(requested_at) FROM (
+                            SELECT requested_at FROM active_trades WHERE user_id = ?
+                            UNION ALL
+                            SELECT requested_at FROM historical_trades WHERE user_id = ?
+                        )
+                    )
+                ORDER BY closed_at
                 """,
-                (
-                    row["id"],
-                    row["user_id"],
-                    row["symbol"],
-                    row["kind"],
-                    row["requested_price"],
-                    row["quantity"],
-                    row["requested_at"],
-                    row["active_from_day"],
-                    row["active_from_hour"],
-                    fill_price,
-                    closed_at.isoformat(),
-                    closed_at_hour.day.isoformat(),
-                    closed_at_hour.hour,
-                    status,
-                ),
-            )
-            conn.execute("DELETE FROM active_trades WHERE id = ?", (trade_id,))
+                (user_id, user_id, user_id),
+            ).fetchall()
+        return [self._historical_trade_from_row(row) for row in rows]
 
     @staticmethod
     def _active_trade_from_row(row: sqlite3.Row) -> ActiveTrade:
@@ -143,6 +202,7 @@ class TradeRepository:
             kind=row["kind"],
             requested_price=row["requested_price"],
             quantity=row["quantity"],
+            value=row["value"],
             requested_at=row["requested_at"],
             active_from=HourlyDate(
                 day=date.fromisoformat(row["active_from_day"]), hour=row["active_from_hour"]
@@ -158,6 +218,7 @@ class TradeRepository:
             kind=row["kind"],
             requested_price=row["requested_price"],
             quantity=row["quantity"],
+            value=row["value"],
             requested_at=row["requested_at"],
             active_from=HourlyDate(
                 day=date.fromisoformat(row["active_from_day"]), hour=row["active_from_hour"]

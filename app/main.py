@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
 from app.container import container
-from app.routers import api_keys, auth, health, market, portfolio, scheduled_jobs, trades, users
+from app.routers import api_keys, auth, health, market, portfolio, scheduled_jobs, trades, users, metadata
 
 API_PREFIX = "/api"
 
@@ -36,7 +36,7 @@ app.include_router(market.router, prefix=API_PREFIX)
 app.include_router(portfolio.router, prefix=API_PREFIX)
 app.include_router(trades.router, prefix=API_PREFIX)
 app.include_router(scheduled_jobs.router, prefix=API_PREFIX)
-# TODO: "metadata" endpoints - day number, hours until end of day, etc.
+app.include_router(metadata.router, prefix=API_PREFIX)
 
 
 # Catch unmatched `/api/...` routes and return 404

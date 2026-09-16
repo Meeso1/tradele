@@ -1,5 +1,3 @@
-from datetime import UTC, datetime, timedelta
-
 from fastapi import APIRouter, Depends
 
 from app.dependencies import MarketDataServiceDep, SettingsServiceDep, get_auth_context
@@ -18,9 +16,8 @@ def get_symbols(settings: SettingsServiceDep) -> list[str]:
 
 @router.get("/prices", response_model=PricesResponse)
 def get_prices(market_data_service: MarketDataServiceDep) -> PricesResponse:
-    """Return mock current prices for every tradable symbol."""
-    now = datetime.now(UTC)
-    market_state = market_data_service.get_prices(HourlyDate.containing(now - timedelta(hours=1)))
-    return PricesResponse(prices=market_state.prices)
+    """Return current (hourly) prices for every tradable symbol."""
+    market_state = market_data_service.get_prices(HourlyDate.last_passed_hour())
+    return PricesResponse(prices=market_state.prices, market_open=market_state.market_open)
 
 # TODO: Some historical prices endpoint for plots etc.

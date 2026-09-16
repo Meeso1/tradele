@@ -9,6 +9,7 @@ without touching any call sites.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 import os
 from pathlib import Path
 
@@ -31,6 +32,9 @@ class SettingsService:
             ).split(",")
             if symbol.strip()
         ]
+        self.first_day_of_game: datetime = datetime.strptime(
+            os.environ.get("TRADELE_FIRST_DAY_OF_GAME", "2026-09-01"), "%Y-%m-%d"
+        ).replace(tzinfo=UTC)
 
         self.alpaca_api_key_id: str = os.environ.get("ALPACA_API_KEY_ID", "")
         self.alpaca_api_secret_key: str = os.environ.get("ALPACA_API_SECRET_KEY", "")

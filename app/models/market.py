@@ -24,6 +24,14 @@ class HourlyDate:
         return HourlyDate.containing(datetime.now(UTC))
 
     @staticmethod
+    def current_with_available_market_data() -> HourlyDate:
+        """
+        Returns the current HourlyDate, adjusted to account for Alpaca 15-minute latency (+1 minute tolerance).
+        Use this as an upper range limit when fast-forwarding the portfolios.
+        """
+        return HourlyDate.containing(datetime.now(UTC) - timedelta(minutes=16))
+
+    @staticmethod
     def last_passed_hour() -> HourlyDate:
         """
         Returns the HourlyDate for the last passed hour.
@@ -62,3 +70,4 @@ class HourlyPriceData:
 class MarketState:
     hour: HourlyDate
     prices: dict[str, HourlyPriceData]
+    market_open: bool

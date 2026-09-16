@@ -73,7 +73,7 @@ class JobScheduler:
             except Exception:
                 self._logger.exception("Job %s failed", job.name)
 
-            # TODO: This won't work correctly if we're too behind on iterations - shouldn't matter right now though
+            # TODO(nitpick): This won't work correctly if we're too behind on iterations - shouldn't matter right now though
             elapsed = loop.time() - started_at
             await asyncio.sleep(max(0.0, job.interval_seconds - elapsed))
 

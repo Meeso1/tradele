@@ -35,7 +35,8 @@ class ActiveTrade(BaseModel):
     symbol: str
     kind: Kind
     requested_price: float | None
-    quantity: float
+    quantity: float | None
+    value: float | None
     requested_at: datetime # Real time at which the trade was requested
     active_from: HourlyDate # Hour when the trade is active. After being posted, the trade starts being active from the next full hour.
 
@@ -49,7 +50,8 @@ class HistoricalTrade(BaseModel):
     symbol: str
     kind: Kind
     requested_price: float | None
-    quantity: float
+    quantity: float | None
+    value: float | None
     requested_at: datetime
     active_from: HourlyDate
     fill_price: float | None # Price at which the trade was executed, or None if it wasn't executed
