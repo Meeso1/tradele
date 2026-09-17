@@ -10,12 +10,24 @@ def _new_database_service() -> DatabaseService:
     return DatabaseService(SettingsService(), logging.getLogger("test"))
 
 
+def _expected_schema_version() -> int:
+    """The version `run_migrations()` brings the schema to.
+
+    Derived from the registered migrations rather than hardcoded, so adding
+    a migration doesn't require touching this file. Relies on conftest
+    having run `run_migrations()` first (which loads the registrations).
+    """
+    from app.container import container
+
+    return max(container.database._migrations)  # pyright: ignore[reportPrivateUsage]
+
+
 def test_run_migrations_creates_users_table():
     from app.container import container
 
     with container.database.connect() as conn:
         row = conn.execute("SELECT version FROM schema_version").fetchone()
-        assert row["version"] == 9
+        assert row["version"] == _expected_schema_version()
 
         conn.execute("INSERT INTO users (id, created_at) VALUES ('u1', 'now')")
         result = conn.execute("SELECT id, created_at FROM users WHERE id = 'u1'").fetchone()
@@ -30,7 +42,7 @@ def test_run_migrations_is_idempotent():
 
     with container.database.connect() as conn:
         row = conn.execute("SELECT version FROM schema_version").fetchone()
-        assert row["version"] == 9
+        assert row["version"] == _expected_schema_version()
 
 
 def test_validate_versions_rejects_non_contiguous_versions():
