@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
 from app.models.market import HourlyDate
 from app.models.trade import ActiveTrade, HistoricalTrade, InactiveTradeStatus
@@ -17,29 +17,31 @@ class TradeRepository:
     def configure(self, logger: logging.Logger) -> None:
         self._logger = logger
 
-    def exists_for_date(self, user_id: str, request_date: HourlyDate) -> bool:
-        """Check whether the user already has an active trade requested on the same day as `request_date`.
-
-        Compares the day of `active_from` minus one hour (i.e. the day a
-        trade was actually requested on) against `request_date`'s day,
-        rather than `active_from`'s day directly, so a trade requested
-        right before midnight (whose `active_from` rolls over to the next
-        day) is still correctly attributed to the day it was requested on.
-        """
-        next_day = request_date.day + timedelta(days=1)
+    def has_submmitted_today(self, user_id: str, request_date: HourlyDate) -> bool:
+        """Check whether the user's most recent trade submission was on the same day as `request_date`."""
         with self._database.connect() as conn:
             row = conn.execute(
-                """
-                SELECT 1 FROM active_trades
-                WHERE user_id = ?
-                    AND (
-                        (active_from_day = ? AND active_from_hour >= 1)
-                        OR (active_from_day = ? AND active_from_hour = 0)
-                    )
-                """,
-                (user_id, request_date.day.isoformat(), next_day.isoformat()),
+                "SELECT last_submitted_at FROM trade_submissions WHERE user_id = ?",
+                (user_id,),
             ).fetchone()
-        return row is not None
+
+        if row is None:
+            return False
+
+        return datetime.fromisoformat(row["last_submitted_at"]).date() == request_date.day
+
+    def record_submission(self, user_id: str, submitted_at: datetime) -> None:
+        """Record that the user submitted a batch of trades at `submitted_at`."""
+        with self._database.connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO trade_submissions (user_id, last_submitted_at)
+                VALUES (?, ?)
+                ON CONFLICT (user_id) DO UPDATE SET
+                    last_submitted_at = excluded.last_submitted_at
+                """,
+                (user_id, submitted_at.isoformat()),
+            )
 
     def insert_requested(self, trade: ActiveTrade) -> None:
         with self._database.connect() as conn:
@@ -168,28 +170,18 @@ class TradeRepository:
         return [self._historical_trade_from_row(row) for row in rows]
 
     def list_changed_since_last_submission(self, user_id: str) -> list[HistoricalTrade]:
-        """Return the user's closed trades that closed after their most recent submission.
-
-        The last submission time is inferred as the newest `requested_at`
-        across the user's active and historical trades. `requested_at` is
-        preserved when a trade moves to `historical_trades`, so the
-        reference point survives the submission's trades being closed.
-        """
+        """Return the user's closed trades that closed after their most recent submission."""
         with self._database.connect() as conn:
             rows = conn.execute(
                 """
                 SELECT * FROM historical_trades
                 WHERE user_id = ?
                     AND closed_at > (
-                        SELECT MAX(requested_at) FROM (
-                            SELECT requested_at FROM active_trades WHERE user_id = ?
-                            UNION ALL
-                            SELECT requested_at FROM historical_trades WHERE user_id = ?
-                        )
+                        SELECT last_submitted_at FROM trade_submissions WHERE user_id = ?
                     )
                 ORDER BY closed_at
                 """,
-                (user_id, user_id, user_id),
+                (user_id, user_id),
             ).fetchall()
         return [self._historical_trade_from_row(row) for row in rows]
 

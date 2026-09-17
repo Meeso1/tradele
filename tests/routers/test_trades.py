@@ -117,6 +117,11 @@ def test_submit_trades_accepts_a_cancel_only_batch(
     (closed,) = container.trade_repository.list_executed(user_id)
     assert closed.id == "t1"
     assert closed.status == "cancelled"
+    # A cancel-only batch still consumes the once-per-day submission slot.
+    assert (
+        client.get("/api/trades/has-submitted-today", headers=headers).json()
+        == {"has_submitted_today": True}
+    )
 
 
 def test_submit_trades_does_not_cancel_another_users_trade(

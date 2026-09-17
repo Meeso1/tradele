@@ -5,69 +5,80 @@ from app.models.market import HourlyDate
 from app.models.trade import ActiveTrade
 
 
-def test_exists_for_date_is_false_with_no_requested_trades():
+def test_exists_for_date_is_false_with_no_submissions():
     container.user_repository.insert("u1", "now")
 
     assert (
-        container.trade_repository.exists_for_date(
+        container.trade_repository.has_submmitted_today(
             "u1", HourlyDate(day=date(2024, 1, 1), hour=9)
         )
         is False
     )
 
 
-def test_insert_requested_then_exists_for_date_returns_true():
+def test_exists_for_date_is_false_when_a_trade_was_merely_requested():
+    # Requesting a trade doesn't count as a submission - only
+    # `record_submission` does (cancel-only submissions record nothing in
+    # `active_trades`, yet must still block a second submission).
     container.user_repository.insert("u1", "now")
-
     container.trade_repository.insert_requested(
-        ActiveTrade(
-            id="t1",
-            user_id="u1",
-            symbol="AAPL",
-            kind="limit_buy",
-            requested_price=190.0,
-            quantity=1,
-            value=None,
-            requested_at=datetime(2024, 1, 1),
-            active_from=HourlyDate(day=date(2024, 1, 1), hour=10),
-        )
+        _active_trade("u1", "t1", requested_at=datetime(2024, 1, 1))
     )
 
     assert (
-        container.trade_repository.exists_for_date(
+        container.trade_repository.has_submmitted_today(
+            "u1", HourlyDate(day=date(2024, 1, 1), hour=9)
+        )
+        is False
+    )
+
+
+def test_record_submission_then_exists_for_date_returns_true():
+    container.user_repository.insert("u1", "now")
+
+    container.trade_repository.record_submission("u1", datetime(2024, 1, 1, 9, 30))
+
+    assert (
+        container.trade_repository.has_submmitted_today(
             "u1", HourlyDate(day=date(2024, 1, 1), hour=9)
         )
         is True
     )
 
 
-def test_exists_for_date_matches_a_trade_requested_right_before_midnight():
+def test_record_submission_keeps_only_the_latest_timestamp():
     container.user_repository.insert("u1", "now")
-    container.trade_repository.insert_requested(
-        ActiveTrade(
-            id="t1",
-            user_id="u1",
-            symbol="AAPL",
-            kind="limit_buy",
-            requested_price=190.0,
-            quantity=1,
-            value=None,
-            requested_at=datetime(2024, 1, 1, 23),
-            # Requested at 23:00 on Jan 1st, so active_from rolls over to Jan 2nd.
-            active_from=HourlyDate(day=date(2024, 1, 2), hour=0),
+    container.trade_repository.record_submission("u1", datetime(2024, 1, 1, 9, 30))
+    container.trade_repository.record_submission("u1", datetime(2024, 1, 2, 9, 30))
+
+    assert (
+        container.trade_repository.has_submmitted_today(
+            "u1", HourlyDate(day=date(2024, 1, 1), hour=9)
         )
+        is False
+    )
+    assert (
+        container.trade_repository.has_submmitted_today(
+            "u1", HourlyDate(day=date(2024, 1, 2), hour=9)
+        )
+        is True
     )
 
-    # Still attributed to Jan 1st (the day it was actually requested on)...
+
+def test_exists_for_date_matches_a_submission_right_before_midnight():
+    container.user_repository.insert("u1", "now")
+    container.trade_repository.record_submission("u1", datetime(2024, 1, 1, 23))
+
+    # Still attributed to Jan 1st (the day it was actually made on)...
     assert (
-        container.trade_repository.exists_for_date(
+        container.trade_repository.has_submmitted_today(
             "u1", HourlyDate(day=date(2024, 1, 1), hour=23)
         )
         is True
     )
     # ...and doesn't block a genuinely new submission on Jan 2nd.
     assert (
-        container.trade_repository.exists_for_date(
+        container.trade_repository.has_submmitted_today(
             "u1", HourlyDate(day=date(2024, 1, 2), hour=9)
         )
         is False
@@ -300,25 +311,7 @@ def test_cancel_if_active_returns_false_for_an_unknown_trade():
 def test_list_changed_since_last_submission_returns_trades_closed_after_the_last_submission():
     container.user_repository.insert("u1", "now")
     container.trade_repository.insert_requested(
-        ActiveTrade(
-            id="t1",
-            user_id="u1",
-            symbol="AAPL",
-            kind="limit_buy",
-            requested_price=190.0,
-            quantity=1,
-            value=None,
-            requested_at=datetime(2024, 1, 1, 9),
-            active_from=HourlyDate(day=date(2024, 1, 1), hour=10),
-        )
-    )
-    # Closed before the submission above - should not be listed.
-    container.trade_repository.move_to_executed(
-        "t1",
-        190.0,
-        datetime(2024, 1, 1, 8, 30),
-        HourlyDate(day=date(2024, 1, 1), hour=8),
-        "executed",
+        _active_trade("u1", "t1", requested_at=datetime(2024, 1, 1, 8))
     )
     container.trade_repository.insert_requested(
         ActiveTrade(
@@ -329,24 +322,20 @@ def test_list_changed_since_last_submission_returns_trades_closed_after_the_last
             requested_price=420.0,
             quantity=1,
             value=None,
-            requested_at=datetime(2024, 1, 1, 9),
+            requested_at=datetime(2024, 1, 1, 8),
             active_from=HourlyDate(day=date(2024, 1, 1), hour=10),
         )
     )
-    container.trade_repository.insert_requested(
-        ActiveTrade(
-            id="t3",
-            user_id="u1",
-            symbol="AAPL",
-            kind="limit_buy",
-            requested_price=191.0,
-            quantity=1,
-            value=None,
-            requested_at=datetime(2024, 1, 2, 9),
-            active_from=HourlyDate(day=date(2024, 1, 2), hour=10),
-        )
+    # Closed before the submission - should not be listed.
+    container.trade_repository.move_to_executed(
+        "t1",
+        190.0,
+        datetime(2024, 1, 1, 8, 30),
+        HourlyDate(day=date(2024, 1, 1), hour=8),
+        "executed",
     )
-    # Closed after the latest submission (t3) - should be listed.
+    container.trade_repository.record_submission("u1", datetime(2024, 1, 2, 9))
+    # Closed after the submission - should be listed.
     container.trade_repository.move_to_executed(
         "t2",
         420.0,
@@ -357,10 +346,36 @@ def test_list_changed_since_last_submission_returns_trades_closed_after_the_last
 
     changed = container.trade_repository.list_changed_since_last_submission("u1")
 
+    # The reference point survives every submitted trade being closed -
+    # there are no active trades left here, yet t2 is still found.
     assert [trade.id for trade in changed] == ["t2"]
 
 
-def test_list_changed_since_last_submission_returns_nothing_without_active_trades():
+def test_list_changed_since_last_submission_returns_nothing_without_submissions():
     container.user_repository.insert("u1", "now")
+    container.trade_repository.insert_requested(
+        _active_trade("u1", "t1", requested_at=datetime(2024, 1, 1, 8))
+    )
+    container.trade_repository.move_to_executed(
+        "t1",
+        190.0,
+        datetime(2024, 1, 1, 9, 30),
+        HourlyDate(day=date(2024, 1, 1), hour=9),
+        "executed",
+    )
 
     assert container.trade_repository.list_changed_since_last_submission("u1") == []
+
+
+def _active_trade(user_id: str, trade_id: str, requested_at: datetime) -> ActiveTrade:
+    return ActiveTrade(
+        id=trade_id,
+        user_id=user_id,
+        symbol="AAPL",
+        kind="limit_buy",
+        requested_price=190.0,
+        quantity=1,
+        value=None,
+        requested_at=requested_at,
+        active_from=HourlyDate(day=requested_at.date(), hour=requested_at.hour + 1),
+    )

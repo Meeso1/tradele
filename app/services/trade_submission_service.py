@@ -66,9 +66,8 @@ class TradeSubmissionService:
             if trade.kind in requires_requested_price and trade.requested_price is None:
                 raise TradeValidationError(f"requested_price is required for {trade.kind} orders")
 
-    # TODO: Track submission hour separately
     def has_submitted_today(self, user_id: str, date: HourlyDate) -> bool:
-        return self._trade_repository.exists_for_date(user_id, date)
+        return self._trade_repository.has_submmitted_today(user_id, date)
 
     def submit(self, user_id: str, trades: list[TradeRequest], trades_to_cancel: list[str], date: HourlyDate) -> TradeSubmissionResult:
         """
@@ -106,6 +105,9 @@ class TradeSubmissionService:
         for trade_id in trades_to_cancel:
             if self._trade_repository.cancel_if_active(user_id, trade_id, now, date):
                 cancelled.append(trade_id)
+
+        if len(trade_ids) > 0 or len(cancelled) > 0:
+            self._trade_repository.record_submission(user_id, now)
 
         self._logger.info("Recorded %d requested trade(s) for user %s, active from %s. Cancelled %d trade(s) (%s requested)", 
             len(trade_ids), user_id, active_from, len(cancelled), len(trades_to_cancel))

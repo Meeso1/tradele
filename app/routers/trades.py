@@ -85,7 +85,7 @@ def has_submitted_today(
     auth_context: AuthContextDep,
     trade_repo: TradeRepositoryDep,
 ) -> HasSubmittedTodayResponse:
-    return HasSubmittedTodayResponse(has_submitted_today=trade_repo.exists_for_date(auth_context.user_id, HourlyDate.current()))
+    return HasSubmittedTodayResponse(has_submitted_today=trade_repo.has_submmitted_today(auth_context.user_id, HourlyDate.current()))
 
 
 @router.get("/changed-since-last-submission", response_model=list[HistoricalTradeResponse])

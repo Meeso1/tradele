@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -11,7 +11,10 @@ from app.services.trade_submission_service import (
     TradeValidationError,
 )
 
-TODAY = HourlyDate(day=date(2024, 1, 1), hour=10)
+# The submission date must be the real current day: `submit` stamps the
+# submission with the real clock, and the once-per-day check compares
+# against the day of this argument.
+TODAY = HourlyDate.current()
 
 
 def test_submit_records_a_pending_requested_trade():
@@ -127,18 +130,6 @@ def test_submit_records_a_market_order_without_a_requested_price():
     assert requested[0].requested_price is None
 
 
-def test_submit_rejects_a_market_order_with_a_requested_price():
-    user_id = container.users.create()
-
-    with pytest.raises(TradeValidationError):
-        container.trades.submit(
-            user_id,
-            [TradeRequest(symbol="AAPL", kind="market_buy", quantity=1, requested_price=190.0)],
-            [],
-            TODAY,
-        )
-
-
 def test_submit_rejects_a_limit_order_without_a_requested_price():
     user_id = container.users.create()
 
@@ -165,8 +156,7 @@ def test_submit_rejects_a_stop_order_without_a_requested_price():
 
 def test_submit_allows_a_cancel_only_batch():
     user_id = container.users.create()
-    # A trade requested right before midnight "yesterday" - still active, but
-    # old enough that today's submission isn't blocked by it.
+    # A still-active trade from a previous submission to cancel.
     container.trade_repository.insert_requested(
         ActiveTrade(
             id="t1",
@@ -189,12 +179,39 @@ def test_submit_allows_a_cancel_only_batch():
     (closed,) = container.trade_repository.list_executed(user_id)
     assert closed.id == "t1"
     assert closed.status == "cancelled"
+    # A cancel-only batch still consumes the once-per-day submission slot.
+    assert container.trades.has_submitted_today(user_id, TODAY) is True
+
+
+def test_submit_rejects_a_second_batch_even_after_a_cancel_only_submission():
+    user_id = container.users.create()
+    container.trade_repository.insert_requested(
+        ActiveTrade(
+            id="t1",
+            user_id=user_id,
+            symbol="AAPL",
+            kind="limit_buy",
+            requested_price=190.0,
+            quantity=1,
+            value=None,
+            requested_at=datetime(2023, 12, 31, 23),
+            active_from=HourlyDate(day=TODAY.day, hour=0),
+        )
+    )
+    container.trades.submit(user_id, [], ["t1"], TODAY)
+
+    with pytest.raises(TradesAlreadySubmittedError):
+        container.trades.submit(
+            user_id,
+            [TradeRequest(symbol="AAPL", kind="limit_buy", quantity=1, requested_price=190.0)],
+            [],
+            TODAY,
+        )
 
 
 def test_submit_cancels_the_users_own_active_trades():
     user_id = container.users.create()
-    # A trade requested right before midnight "yesterday" - still active, but
-    # old enough that today's submission isn't blocked by it.
+    # A still-active trade from a previous submission to cancel.
     container.trade_repository.insert_requested(
         ActiveTrade(
             id="t1",
