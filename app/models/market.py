@@ -29,7 +29,7 @@ class HourlyDate:
         Returns the current HourlyDate, adjusted to account for Alpaca 15-minute latency (+1 minute tolerance).
         Use this as an upper range limit when fast-forwarding the portfolios.
         """
-        return HourlyDate.containing(datetime.now(UTC) - timedelta(minutes=16))
+        return HourlyDate.containing(datetime.now(UTC) - HourlyDate._alpaca_latency())
 
     @staticmethod
     def last_passed_hour() -> HourlyDate:
@@ -37,7 +37,7 @@ class HourlyDate:
         Returns the HourlyDate for the last passed hour.
         Use this to determine the last hour for which market data is available and trades can be executed.
         """
-        return HourlyDate.containing(datetime.now(UTC) - timedelta(hours=1))
+        return HourlyDate.containing(datetime.now(UTC) - timedelta(hours=1) - HourlyDate._alpaca_latency())
 
     @staticmethod
     def next(hour: HourlyDate) -> HourlyDate:
@@ -54,6 +54,10 @@ class HourlyDate:
     @override
     def __str__(self) -> str:
         return f"{self.hour:02}:00 {self.day.isoformat()}"
+
+    @staticmethod
+    def _alpaca_latency() -> timedelta:
+        return timedelta(minutes=16)
 
 
 @dataclass
