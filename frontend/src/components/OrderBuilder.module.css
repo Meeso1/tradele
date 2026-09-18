@@ -208,12 +208,31 @@
   margin-bottom: 5px;
 }
 
-.priceInput {
-  width: 100%;
+.priceBox {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 9px;
   background: var(--paper);
+}
+
+.priceBox:focus-within {
+  border-color: var(--ink);
+}
+
+.pricePrefix {
+  font: 700 15px var(--font-mono);
+  color: var(--ink);
+}
+
+.priceInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
   font: 700 15px var(--font-mono);
   color: var(--ink);
 }
@@ -225,7 +244,6 @@
 
 .priceInput:focus {
   outline: none;
-  border-color: var(--ink);
 }
 
 .addOrder {

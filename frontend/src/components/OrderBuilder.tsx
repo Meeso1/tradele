@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import type { OrderQuantity, OrderSide, OrderType, QtyMode, SymbolQuote } from "../types";
-import { formatUsd, formatWholeUsd } from "../utils/format";
+import { formatWholeUsd } from "../utils/format";
 import { SectionTitle } from "./SectionTitle";
 import styles from "./OrderBuilder.module.css";
 
@@ -47,11 +47,6 @@ const SIDES: { id: OrderSide; label: string }[] = [
 const PERCENTS = [25, 50, 75, 100] as const;
 const DEFAULT_PERCENT = 50;
 
-function percentAmount(percent: number, buyingPower: number, price: number, mode: QtyMode): string {
-  const budget = (percent / 100) * buyingPower;
-  return mode === "shares" ? (budget / price).toFixed(1) : budget.toFixed(0);
-}
-
 function sanitizeNumberText(raw: string): string {
   return raw.replace(/[^0-9.]/g, "");
 }
@@ -62,11 +57,20 @@ export function OrderBuilder({ quote, buyingPower, open, onToggle, onAdd, initia
   const [qtyMode, setQtyMode] = useState<QtyMode>(
     initial != null && "value" in initial.quantity ? "value" : "shares",
   );
-  const [amountText, setAmountText] = useState<string>(() => {
-    if (initial == null) return percentAmount(DEFAULT_PERCENT, buyingPower, quote.price, "shares");
-    return "shares" in initial.quantity
-      ? String(initial.quantity.shares)
-      : String(initial.quantity.value);
+  // Both quantities are stored and kept in agreement while typing (typing in
+  // one writes the converted value into the other), so switching modes only
+  // flips which one is shown and never mutates the entered number.
+  const [sharesText, setSharesText] = useState<string>(() => {
+    if (initial == null) {
+      return ((DEFAULT_PERCENT / 100) * buyingPower / quote.price).toFixed(1);
+    }
+    if ("shares" in initial.quantity) return String(initial.quantity.shares);
+    return (initial.quantity.value / quote.price).toFixed(1);
+  });
+  const [valueText, setValueText] = useState<string>(() => {
+    if (initial == null) return ((DEFAULT_PERCENT / 100) * buyingPower).toFixed(0);
+    if ("value" in initial.quantity) return String(initial.quantity.value);
+    return (initial.quantity.shares * quote.price).toFixed(0);
   });
   const [activePercent, setActivePercent] = useState<number | null>(
     initial == null ? DEFAULT_PERCENT : null,
@@ -76,6 +80,7 @@ export function OrderBuilder({ quote, buyingPower, open, onToggle, onAdd, initia
   );
 
   const spec = ORDER_TYPE_SPECS[type];
+  const amountText = qtyMode === "shares" ? sharesText : valueText;
   const amount = parseFloat(amountText);
   const amountValid = Number.isFinite(amount) && amount > 0;
   // Client-side conversions are for the "≈" hints only - the submitted quantity
@@ -94,20 +99,33 @@ export function OrderBuilder({ quote, buyingPower, open, onToggle, onAdd, initia
 
   const changeQtyMode = (mode: QtyMode) => {
     if (mode === qtyMode) return;
-    // Carry the current amount over to the other unit.
-    if (amountValid) setAmountText(mode === "value" ? value.toFixed(0) : shares.toFixed(1));
     setQtyMode(mode);
     setActivePercent(null);
   };
 
   const changeAmount = (raw: string) => {
-    setAmountText(sanitizeNumberText(raw));
+    const sanitized = sanitizeNumberText(raw);
     setActivePercent(null);
+    if (qtyMode === "shares") {
+      setSharesText(sanitized);
+      const parsed = parseFloat(sanitized);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        setValueText((parsed * quote.price).toFixed(0));
+      }
+    } else {
+      setValueText(sanitized);
+      const parsed = parseFloat(sanitized);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        setSharesText((parsed / quote.price).toFixed(1));
+      }
+    }
   };
 
   const applyPercent = (percent: number) => {
     setActivePercent(percent);
-    setAmountText(percentAmount(percent, buyingPower, quote.price, qtyMode));
+    const budget = (percent / 100) * buyingPower;
+    setSharesText((budget / quote.price).toFixed(1));
+    setValueText(budget.toFixed(0));
   };
 
   const submit = () => {
@@ -121,14 +139,17 @@ export function OrderBuilder({ quote, buyingPower, open, onToggle, onAdd, initia
     return (
       <div className={styles.priceField}>
         <div className={styles.priceLabel}>{spec.priceField.label}</div>
-        <input
-          className={styles.priceInput}
-          inputMode="decimal"
-          aria-label={spec.priceField.label}
-          placeholder={formatUsd(defaultPrice ?? 0)}
-          value={priceText}
-          onChange={(event) => setPriceText(sanitizeNumberText(event.target.value))}
-        />
+        <div className={styles.priceBox}>
+          <span className={styles.pricePrefix}>$</span>
+          <input
+            className={styles.priceInput}
+            inputMode="decimal"
+            aria-label={spec.priceField.label}
+            placeholder={(defaultPrice ?? 0).toFixed(2)}
+            value={priceText}
+            onChange={(event) => setPriceText(sanitizeNumberText(event.target.value))}
+          />
+        </div>
       </div>
     );
   };

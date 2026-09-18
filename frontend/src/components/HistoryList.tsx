@@ -1,21 +1,21 @@
-import { HISTORY } from "../mock/data";
 import type { HistoryDay, OrderDetails } from "../types";
 import { SectionTitle } from "./SectionTitle";
 import { StatusChip } from "./StatusChip";
 import styles from "./HistoryList.module.css";
 
 interface HistoryListProps {
+  days: readonly HistoryDay[];
   onSelectOrder: (details: OrderDetails) => void;
 }
 
 /** Past days, each listing the trades that were closed during that day. */
-export function HistoryList({ onSelectOrder }: HistoryListProps) {
+export function HistoryList({ days, onSelectOrder }: HistoryListProps) {
   return (
     <section>
       <div className={styles.head}>
         <SectionTitle>History</SectionTitle>
       </div>
-      {HISTORY.map((day: HistoryDay) => (
+      {days.map((day) => (
         <div key={day.date} className={styles.card}>
           <div className={styles.cardDate}>{day.date}</div>
           <div className={styles.cardOrders}>
@@ -40,6 +40,7 @@ export function HistoryList({ onSelectOrder }: HistoryListProps) {
           </div>
         </div>
       ))}
+      {days.length === 0 && <div className={styles.emptyNote}>No closed trades yet.</div>}
     </section>
   );
 }

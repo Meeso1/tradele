@@ -1,16 +1,21 @@
-import { CASH, HOLDINGS } from "../mock/data";
+import type { Holding } from "../types";
 import { formatShares, formatWholeUsd } from "../utils/format";
 import { SectionTitle } from "./SectionTitle";
 import styles from "./HoldingsList.module.css";
 
+interface HoldingsListProps {
+  holdings: readonly Holding[];
+  cash: number;
+}
+
 /** Holdings table plus the cash row (Portfolio screen). */
-export function HoldingsList() {
+export function HoldingsList({ holdings, cash }: HoldingsListProps) {
   return (
     <section>
       <div className={styles.head}>
         <SectionTitle>Holdings</SectionTitle>
       </div>
-      {HOLDINGS.map((holding) => (
+      {holdings.map((holding) => (
         <div key={holding.symbol} className={styles.row}>
           <div className={styles.main}>
             <div className={styles.symbol}>{holding.symbol}</div>
@@ -24,7 +29,7 @@ export function HoldingsList() {
       ))}
       <div className={styles.cashRow}>
         <span className={styles.cashLabel}>CASH</span>
-        <span className={styles.cashValue}>{formatWholeUsd(CASH)}</span>
+        <span className={styles.cashValue}>{formatWholeUsd(cash)}</span>
       </div>
     </section>
   );

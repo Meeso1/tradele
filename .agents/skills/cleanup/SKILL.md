@@ -1,6 +1,6 @@
 ---
 name: cleanup
-description: Cleans up recently-written Tradele backend code (the last commit(s) plus any uncommitted changes) - resolving TODO(cleanup) markers and small missing-implementation TODOs, syncing repositories/SQL/migrations with model changes, updating tests, and fixing obvious bugs. Use when the user asks to "clean up", "review", or "polish" recent changes.
+description: Cleans up recently-written Tradele code (the last commit(s) plus any uncommitted changes) - resolving TODO(cleanup) markers and small missing-implementation TODOs, syncing repositories/SQL/migrations and the frontend TS DTOs with model/DTO changes, updating tests, and fixing obvious bugs. Use when the user asks to "clean up", "review", or "polish" recent changes.
 ---
 
 # Cleaning up recent Tradele changes
@@ -53,7 +53,24 @@ persists it. For every repository touched (or touching a model that changed):
 - Re-check query correctness, not just shape: filters that should account for edge cases (e.g.
   day/hour boundaries), missing indexes/ordering implied by a docstring, etc.
 
-## 4. Update tests
+## 4. Sync the frontend TS DTOs with the Python DTOs
+
+The frontend mirrors the backend request/response schemas by hand in `frontend/src/api/dto.ts`
+(mapped into UI types by `frontend/src/api/mappers.ts`). These are not generated, so they drift
+silently. Whenever a change touched `app/dtos/*.py` (or the Pydantic models those DTOs wrap,
+e.g. `app/models/*.py`):
+
+- Diff each changed DTO against its TS counterpart in `frontend/src/api/dto.ts` - field names
+  (snake_case vs camelCase is NOT applied; the TS DTOs keep the backend's snake_case), field
+  types, optionality (`| null` vs `?`), and new/removed fields.
+- Update the mappers in `frontend/src/api/mappers.ts` for any shape change, and check the
+  services in `frontend/src/services/` for request payloads that must match the new request
+  DTOs.
+- Run `npm run build` from `frontend/` (tsc + vite) to catch type-level drift; note that tsc
+  can't catch a *backend* field rename the TS side wasn't told about, so the manual diff in
+  the first step is the real check.
+
+## 5. Update tests
 
 - The user will very likely say they haven't updated tests themselves except for mechanical
   renames - meaning any semantic drift between tests and the cleaned-up code needs to be fixed
@@ -65,7 +82,7 @@ persists it. For every repository touched (or touching a model that changed):
 - Run the project's test command and lint (see the repo's `AGENTS.md`) after every meaningful
   batch of changes, not just once at the end - fix regressions before moving on.
 
-## 5. Look for obvious bugs
+## 6. Look for obvious bugs
 
 While reading through the touched files and their neighbors, watch specifically for:
 
@@ -81,7 +98,7 @@ While reading through the touched files and their neighbors, watch specifically 
 - Dead code that only existed to serve something now-removed (e.g. a helper only used by a
   method you just deleted).
 
-## 6. Keep changes minimal and consistent
+## 7. Keep changes minimal and consistent
 
 - Follow the conventions already documented in the repo's `AGENTS.md` and other skills (e.g.
   `database-migrations`) rather than introducing new patterns.

@@ -6,8 +6,10 @@ import { HistoryList } from "../components/HistoryList";
 import { HoldingsList } from "../components/HoldingsList";
 import { OpenOrdersList } from "../components/OpenOrdersList";
 import { PortfolioSummary } from "../components/PortfolioSummary";
+import { StatusNote } from "../components/StatusNote";
 import { TabBar } from "../components/TabBar";
-import { INITIAL_OPEN_ORDERS } from "../mock/data";
+import { usePortfolioOverview } from "../hooks/usePortfolioOverview";
+import { useTrades } from "../hooks/useTrades";
 import type { OrderDetails, Tab } from "../types";
 import styles from "./PortfolioScreen.module.css";
 
@@ -16,6 +18,8 @@ interface PortfolioScreenProps {
 }
 
 export function PortfolioScreen({ onTabChange }: PortfolioScreenProps) {
+  const overview = usePortfolioOverview();
+  const trades = useTrades();
   const [details, setDetails] = useState<OrderDetails | null>(null);
 
   return (
@@ -25,12 +29,23 @@ export function PortfolioScreen({ onTabChange }: PortfolioScreenProps) {
       <div className={styles.content}>
         <div className={styles.columns}>
           <div className={styles.primary}>
-            <PortfolioSummary />
-            <HoldingsList />
+            <PortfolioSummary overview={overview.data} />
+            {overview.data != null && (
+              <HoldingsList holdings={overview.data.holdings} cash={overview.data.cash} />
+            )}
+            {overview.error != null && (
+              <StatusNote tone="error" message={overview.error} onRetry={overview.reload} />
+            )}
           </div>
           <div className={styles.secondary}>
-            <OpenOrdersList orders={INITIAL_OPEN_ORDERS} onManage={() => onTabChange("market")} />
-            <HistoryList onSelectOrder={setDetails} />
+            <OpenOrdersList
+              orders={trades.data?.openOrders ?? []}
+              onManage={() => onTabChange("market")}
+            />
+            <HistoryList days={trades.data?.history ?? []} onSelectOrder={setDetails} />
+            {trades.error != null && (
+              <StatusNote tone="error" message={trades.error} onRetry={trades.reload} />
+            )}
           </div>
         </div>
         <div className={styles.bottomSpacer} />

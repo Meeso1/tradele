@@ -52,3 +52,9 @@
 .orderChevron {
   color: var(--mut);
 }
+
+.emptyNote {
+  margin: 0 18px;
+  font: 12px var(--font-ui);
+  color: var(--mut);
+}

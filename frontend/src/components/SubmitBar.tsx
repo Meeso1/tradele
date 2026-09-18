@@ -5,11 +5,13 @@ interface SubmitBarProps {
   cancelCount: number;
   /** After the daily submission the set is locked until the next day. */
   locked: boolean;
+  /** True while the submission request is in flight. */
+  submitting?: boolean;
   onSubmit: () => void;
 }
 
 /** Order-set summary plus submit button, above the tab bar. */
-export function SubmitBar({ draftsCount, cancelCount, locked, onSubmit }: SubmitBarProps) {
+export function SubmitBar({ draftsCount, cancelCount, locked, submitting = false, onSubmit }: SubmitBarProps) {
   const nothingToCommit = draftsCount === 0 && cancelCount === 0;
   return (
     <div className={styles.row}>
@@ -32,9 +34,9 @@ export function SubmitBar({ draftsCount, cancelCount, locked, onSubmit }: Submit
         type="button"
         className={styles.submitBtn}
         onClick={onSubmit}
-        disabled={locked || nothingToCommit}
+        disabled={locked || submitting || nothingToCommit}
       >
-        Submit &crarr;
+        {submitting ? "Submitting\u2026" : "Submit \u21B5"}
       </button>
     </div>
   );

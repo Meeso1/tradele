@@ -1,23 +1,40 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-import { TIMEFRAMES, candlesFor } from "../mock/data";
+import { useCandles } from "../hooks/useCandles";
+import { marketService } from "../services/MarketService";
 import type { SymbolQuote } from "../types";
 import { formatSignedPercent, formatSignedUsd, formatUsd } from "../utils/format";
 import { CandleChart } from "./CandleChart";
+import { StatusNote } from "./StatusNote";
 import styles from "./QuoteDetail.module.css";
 
 interface QuoteDetailProps {
   quote: SymbolQuote;
 }
 
-/** Selected-symbol header, candlestick chart, and timeframe chips. */
+/**
+ * Selected-symbol header, candlestick chart, and timeframe chips. The change
+ * next to the price is the displayed period's change: the first candle's
+ * open vs. the last candle's close, so it follows the selected timeframe.
+ */
 export function QuoteDetail({ quote }: QuoteDetailProps) {
-  const [selectedTimeframe, setSelectedTimeframe] = useState(TIMEFRAMES[1].label);
+  const timeframes = marketService.listTimeframes();
+  const [selectedTimeframe, setSelectedTimeframe] = useState(timeframes[1].label);
 
   const timeframe =
-    TIMEFRAMES.find((candidate) => candidate.label === selectedTimeframe) ?? TIMEFRAMES[1];
-  const candles = useMemo(() => candlesFor(quote, timeframe), [quote, timeframe]);
-  const quoteUp = quote.changeAbs >= 0;
+    timeframes.find((candidate) => candidate.label === selectedTimeframe) ?? timeframes[1];
+  const candles = useCandles(quote, timeframe);
+
+  const series = candles.data;
+  const periodStart = series?.[0];
+  const periodEnd = series?.[series.length - 1];
+  const changeAbs =
+    periodStart != null && periodEnd != null ? periodEnd.close - periodStart.open : quote.changeAbs;
+  const changePct =
+    periodStart != null && periodEnd != null && periodStart.open !== 0
+      ? ((periodEnd.close - periodStart.open) / periodStart.open) * 100
+      : quote.changePct;
+  const quoteUp = changeAbs >= 0;
 
   return (
     <section>
@@ -28,20 +45,28 @@ export function QuoteDetail({ quote }: QuoteDetailProps) {
         </div>
         <div className={styles.quoteChange}>
           <div className={`${styles.changeAbs} ${quoteUp ? styles.up : styles.down}`}>
-            {formatSignedUsd(quote.changeAbs, 2)}
+            {formatSignedUsd(changeAbs, 2)}
           </div>
           <div className={`${styles.changePct} ${quoteUp ? styles.up : styles.down}`}>
-            {formatSignedPercent(quote.changePct, 2)}
+            {formatSignedPercent(changePct, 2)}
           </div>
         </div>
       </div>
 
       <div className={styles.chart}>
-        <CandleChart data={candles} />
+        {series != null ? (
+          <CandleChart data={series} />
+        ) : (
+          <StatusNote
+            tone={candles.error == null ? "loading" : "error"}
+            message={candles.error ?? undefined}
+            onRetry={candles.error == null ? undefined : candles.reload}
+          />
+        )}
       </div>
 
       <div className={styles.timeframes}>
-        {TIMEFRAMES.map((timeframeOption) => (
+        {timeframes.map((timeframeOption) => (
           <button
             key={timeframeOption.label}
             type="button"

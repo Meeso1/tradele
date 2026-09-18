@@ -35,14 +35,23 @@ export function formatShares(shares: number): string {
   return Number.isInteger(shares) ? String(shares) : shares.toFixed(1);
 }
 
+/** "Sep 11" - short month/day label for a history day heading. */
+export function formatDayLabel(dateIso: string): string {
+  const [year, month, day] = dateIso.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 /** "LIMIT" / "STOP" / "MARKET" */
 export function orderTypeLabel(type: OrderType): string {
   return type.toUpperCase();
 }
 
-/** "30 sh @ $61.00" / "$1,750 at market" - quantity as the user specified it. */
+/** "30 sh @ $61.00" / "$1,750 @ market" - quantity as the user specified it. */
 export function orderQtyLabel(quantity: OrderQuantity, price?: number): string {
   const quantityText =
     "shares" in quantity ? `${formatShares(quantity.shares)} sh` : formatWholeUsd(quantity.value);
-  return price != null ? `${quantityText} @ ${formatUsd(price)}` : `${quantityText} at market`;
+  return price != null ? `${quantityText} @ ${formatUsd(price)}` : `${quantityText} @ market`;
 }

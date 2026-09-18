@@ -1,19 +1,23 @@
-import { QUOTES } from "../mock/data";
+import type { PriceChange, SymbolQuote } from "../types";
 import { formatSignedPercent } from "../utils/format";
 import styles from "./TickerStrip.module.css";
 
 interface TickerStripProps {
+  quotes: readonly SymbolQuote[];
+  /** Daily change per symbol (see `useDailyChanges`). */
+  changes: Readonly<Record<string, PriceChange>>;
   selectedSymbol: string;
   onSelect: (symbol: string) => void;
 }
 
 /** Horizontally scrolling watchlist chips; the selected one is highlighted. */
-export function TickerStrip({ selectedSymbol, onSelect }: TickerStripProps) {
+export function TickerStrip({ quotes, changes, selectedSymbol, onSelect }: TickerStripProps) {
   return (
     <div className={styles.strip}>
-      {QUOTES.map((ticker) => {
+      {quotes.map((ticker) => {
         const selected = ticker.symbol === selectedSymbol;
-        const tickerUp = ticker.changePct >= 0;
+        const change = changes[ticker.symbol];
+        const tickerUp = change != null ? change.pct >= 0 : true;
         return (
           <button
             key={ticker.symbol}
@@ -31,7 +35,7 @@ export function TickerStrip({ selectedSymbol, onSelect }: TickerStripProps) {
                     : styles.tickerChangeDown
               }
             >
-              {formatSignedPercent(ticker.changePct)}
+              {change != null ? formatSignedPercent(change.pct) : "\u2014"}
             </div>
           </button>
         );

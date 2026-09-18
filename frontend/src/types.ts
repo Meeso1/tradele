@@ -37,6 +37,20 @@ export interface Candle {
   readonly close: number;
 }
 
+/** Chart timeframe option for the quote-detail candlesticks. */
+export interface Timeframe {
+  readonly label: string;
+  /** Candle interval shown under the label. */
+  readonly interval: string;
+  readonly points: number;
+}
+
+/** Change over a period: absolute and percent. */
+export interface PriceChange {
+  readonly abs: number;
+  readonly pct: number;
+}
+
 export interface SymbolQuote {
   readonly symbol: string;
   readonly price: number;

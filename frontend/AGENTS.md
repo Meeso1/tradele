@@ -21,14 +21,33 @@ project conventions).
   `.shell` app container. Nothing else belongs here.
 - `types.ts` - shared domain types: immutable data types plus the `*State` types that add
   mutable view state on top of them.
-- `utils/` - pure helpers with no React dependency (number/time formatting). All user-visible
-  number formatting goes through `utils/format.ts` so minus signs, grouping, and decimals
-  stay consistent.
-- `mock/` - **all** mock data and deterministic (seeded) generators. The backend is not wired
-  up yet; when endpoints land, replace imports from this module with API calls without
-  changing component code.
+- `api/` - the HTTP layer: `client.ts` (fetch wrapper with bearer-token auth + the anonymous
+  session bootstrap that creates a user and mints a token, stored in localStorage), `dto.ts`
+  (raw request/response types mirroring `app/dtos/*.py` - keep them in sync by hand), and
+  `mappers.ts` (DTO → domain-type translation). Nothing here knows about React.
+- `services/` - one class per backend domain (`MarketService`, `PortfolioService`,
+  `TradesService`, `MetadataService`), exported as singletons. They own the API calls and all
+  mapping to domain types; this is also where methods for not-yet-existing endpoints live,
+  marked with `TODO:` comments and backed by `mock/data.ts`.
+- `hooks/` - thin data-loading hooks (`useAsync` plus one per service call). Components and
+  screens read data through these, never through `api/` or `services/` directly.
+- `utils/` - pure helpers with no React dependency (number/time formatting, order math). All
+  user-visible number formatting goes through `utils/format.ts` so minus signs, grouping, and
+  decimals stay consistent.
+- `mock/` - deterministic (seeded) generators used by services for endpoints that don't exist
+  yet (candle history, portfolio value history). Components never import from here; when an
+  endpoint lands, swap the fallback in its service and delete what becomes unused.
 - `components/` - components, including ones only used by a single screen.
 - `screens/` - one module per tab. Screens own their local UI state and compose components.
+
+## Data flow
+
+`App` bootstraps the session (anonymous user + access token) before rendering any screen;
+every API endpoint requires a token. Screens load data via hooks, which call services, which
+call `api/`. Components are presentational: data comes in as props (or via a hook), and
+interactions go back up as callbacks. Change indicators are always derived from the
+displayed series (first point → last point), never from static per-range config - ticker
+tiles' daily change comes from the same seeded 1-day series the quote chart uses.
 
 ## Conventions
 
@@ -65,10 +84,11 @@ project conventions).
   client never converts between them for submission; the backend (or execution time) does.
   Client-side conversions are for display hints ("≈") only.
 - **Charts are hand-rolled SVG** rendering from plain data arrays. Don't add a charting
-  library unless there's a strong reason. Chart series come from the seeded generators in
-  `mock/` so visuals are deterministic.
-- **No backend calls yet.** Don't reintroduce `fetch("/api/...")` calls until the
-  corresponding endpoints exist; everything currently reads from `src/mock/`.
+  library unless there's a strong reason. Chart series come from the services (currently the
+  seeded generators in `mock/` - see the TODOs there).
+- **Endpoints missing on the backend** still get API-shaped service methods, marked with a
+  `TODO:` comment (never prose like "mocked for now") and backed by `mock/data.ts`. When the
+  endpoint lands, replace the fallback in the service.
 - Keep TypeScript strict-clean: no `any`, no unused imports (the build runs `tsc --noEmit`).
 
 ## Design
