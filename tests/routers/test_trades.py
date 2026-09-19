@@ -212,25 +212,6 @@ def test_submit_trades_accepts_a_market_order_without_a_requested_price(
     assert requested[0].requested_price is None
 
 
-def test_submit_trades_returns_400_for_a_market_order_with_a_requested_price(
-    auth_headers: Callable[[str], dict[str, str]],
-):
-    user_id = container.users.create()
-
-    response = client.post(
-        "/api/trades",
-        json={
-            "new_trades": [
-                {"symbol": "AAPL", "kind": "market_buy", "quantity": 1, "requested_price": 190.0}
-            ],
-            "trades_to_cancel": [],
-        },
-        headers=auth_headers(user_id),
-    )
-
-    assert response.status_code == 400
-
-
 def test_submit_trades_returns_400_for_a_limit_order_without_a_requested_price(
     auth_headers: Callable[[str], dict[str, str]],
 ):

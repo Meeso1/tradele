@@ -9,7 +9,7 @@ is wired together.
 from __future__ import annotations
 
 from app.jobs.job_scheduler import JobScheduler
-from app.jobs.trade_execution_job import TradeExecutionJob
+from app.jobs.trades_and_portfolio_update_job import TradesAndPortfolioUpdateJob
 from app.repositories.api_key_repository import ApiKeyRepository
 from app.repositories.market_data_repository import MarketDataRepository
 from app.repositories.portfolio_repository import PortfolioRepository
@@ -87,7 +87,10 @@ class Container:
             self.logger.get_logger("MarketDataService"),
         )
         self.portfolios: PortfolioService = PortfolioService(
-            self.portfolio_repository, self.logger.get_logger("PortfolioService")
+            self.portfolio_repository,
+            self.users,
+            self.market_data,
+            self.logger.get_logger("PortfolioService"),
         )
         self.trades: TradeSubmissionService = TradeSubmissionService(
             self.trade_repository, self.settings, self.logger.get_logger("TradeService")
@@ -102,7 +105,7 @@ class Container:
         )
 
         self.job_scheduler: JobScheduler = JobScheduler(self.settings, self.logger.get_logger("JobScheduler"))
-        self.job_scheduler.register(TradeExecutionJob(self.trade_execution))
+        self.job_scheduler.register(TradesAndPortfolioUpdateJob(self.trade_execution, self.portfolios))
 
     def reset(self) -> None:
         """Re-resolve settings/logging from the environment and propagate them.

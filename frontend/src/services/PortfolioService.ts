@@ -1,5 +1,5 @@
 import { apiGet } from "../api/client";
-import type { PortfolioResponseDto, PricesResponseDto } from "../api/dto";
+import type { MarketStateResponseDto, PortfolioResponseDto } from "../api/dto";
 import { mapPortfolioOverview, type PortfolioOverview } from "../api/mappers";
 import { PORTFOLIO_RANGES, SINCE_SUBMIT, seriesFor, type PortfolioRange } from "../mock/data";
 
@@ -33,11 +33,11 @@ export interface PortfolioSummary {
 export class PortfolioService {
   /** Cash, holdings (with last prices) and total value for the signed-in player. */
   async getOverview(): Promise<PortfolioOverview> {
-    const [portfolio, prices] = await Promise.all([
+    const [portfolio, priceStates] = await Promise.all([
       apiGet<PortfolioResponseDto>("/portfolio"),
-      apiGet<PricesResponseDto>("/market/prices"),
+      apiGet<MarketStateResponseDto[]>("/market/prices"),
     ]);
-    return mapPortfolioOverview(portfolio, prices);
+    return mapPortfolioOverview(portfolio, priceStates[priceStates.length - 1]);
   }
 
   /** Range options for the portfolio-value chart. */

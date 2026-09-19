@@ -55,7 +55,8 @@ class AlpacaMarketDataClient:
     def get_hourly_bars(
         self, symbols: Iterable[str], start: HourlyDate, end: HourlyDate
     ) -> dict[str, list[HourlyPriceData]]:
-        """Fetch 1-hour OHLC bars for `symbols` in the interval [start, end).
+        """Fetch 1-hour OHLC bars for `symbols` in the interval [start, end],
+        both ends inclusive (Alpaca's `end` timestamp is inclusive).
 
         The returned dict always has an entry for every requested symbol,
         even if Alpaca returned no bars for it (e.g. the market was closed

@@ -80,7 +80,7 @@ class TradeExecutionService:
 
             starting_hour = trades[0].active_from
         
-        for hour in HourlyDate.enumerate_range(starting_hour, current_hour):
+        for hour in HourlyDate.enumerate_range(starting_hour, HourlyDate.last_passed_hour()):
             self.execute_user_trades_at_hour(user_id, hour)
     
     def execute_user_trades_at_hour(self, user_id: str, hour: HourlyDate) -> None:
@@ -92,7 +92,7 @@ class TradeExecutionService:
             self._logger.info("Skipping trades update for hour %s for user %s - portfolio was updated up %s", hour, user_id, portfolio.last_hourly_update)
             return
 
-        pricing_data = self._market_data_service.get_prices(hour)
+        pricing_data = self._market_data_service.get_prices_for_hour(hour)
         if not pricing_data.market_open:
             self._logger.info("Skipping trades update for hour %s for user %s - market is closed", hour, user_id)
             return

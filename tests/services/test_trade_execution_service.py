@@ -62,7 +62,7 @@ def test_execute_user_trades_at_hour_fills_a_limit_buy_when_price_is_reached(
     _submit(user_id, "limit_buy", quantity=10, requested_price=190.0)
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0)
     )
 
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
@@ -86,7 +86,7 @@ def test_execute_user_trades_at_hour_leaves_a_limit_buy_open_when_price_not_reac
     _submit(user_id, "limit_buy", quantity=10, requested_price=100.0)
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0)
     )
 
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
@@ -102,7 +102,7 @@ def test_execute_user_trades_at_hour_marks_insufficient_funds_when_cash_is_too_l
     _submit(user_id, "limit_buy", quantity=100_000, requested_price=190.0)
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0)
     )
 
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
@@ -122,7 +122,7 @@ def test_execute_user_trades_at_hour_marks_symbol_unavailable_when_no_price_data
     # Another symbol trades this hour (so the market is open), but AAPL has no bar.
     monkeypatch.setattr(
         container.market_data,
-        "get_prices",
+        "get_prices_for_hour",
         lambda hour: _fake_prices("MSFT", 185.0, 195.0),
     )
 
@@ -142,12 +142,12 @@ def test_execute_user_trades_at_hour_is_a_noop_when_the_portfolio_is_already_up_
     _set_last_hourly_update(user_id, HourlyDate.next(HOUR))
     called = False
 
-    def _get_prices(hour: HourlyDate) -> MarketState:
+    def _get_prices_for_hour(hour: HourlyDate) -> MarketState:
         nonlocal called
         called = True
         return _fake_prices("AAPL", 185.0, 195.0)
 
-    monkeypatch.setattr(container.market_data, "get_prices", _get_prices)
+    monkeypatch.setattr(container.market_data, "get_prices_for_hour", _get_prices_for_hour)
 
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
 
@@ -164,7 +164,7 @@ def test_execute_user_trades_at_hour_fills_a_market_buy_at_the_open_price(
     _submit(user_id, "market_buy", quantity=10)
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
     )
 
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
@@ -186,7 +186,7 @@ def test_execute_user_trades_at_hour_fills_a_market_sell_at_the_open_price(
     _submit(user_id, "market_buy", quantity=10)
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
     )
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
 
@@ -210,7 +210,7 @@ def test_execute_user_trades_at_hour_marks_insufficient_funds_when_holdings_are_
     _submit(user_id, "market_sell", quantity=10)
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
     )
 
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
@@ -228,7 +228,7 @@ def test_execute_user_trades_at_hour_fills_a_stop_buy_at_the_requested_price(
     _submit(user_id, "stop_buy", quantity=10, requested_price=192.0)
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
     )
 
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
@@ -246,7 +246,7 @@ def test_execute_user_trades_at_hour_fills_a_stop_buy_at_the_open_when_it_gaps_u
     _submit(user_id, "stop_buy", quantity=10, requested_price=180.0)
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
     )
 
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
@@ -264,7 +264,7 @@ def test_execute_user_trades_at_hour_leaves_a_stop_buy_open_when_the_stop_price_
     _submit(user_id, "stop_buy", quantity=10, requested_price=200.0)
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
     )
 
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
@@ -280,7 +280,7 @@ def test_execute_user_trades_at_hour_fills_a_stop_sell_at_the_requested_price(
     _submit(user_id, "market_buy", quantity=10)
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
     )
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
 
@@ -318,7 +318,7 @@ def test_execute_user_trades_at_hour_marks_malformed_request_when_a_limit_trade_
     )
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0)
     )
 
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
@@ -339,7 +339,7 @@ def test_fastforward_all_users_executes_pending_trades_for_every_user(
     _set_last_hourly_update(user_a, HOUR_BEFORE)
     _set_last_hourly_update(user_b, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0)
     )
     monkeypatch.setattr(HourlyDate, "current", staticmethod(lambda: HourlyDate.next(HOUR)))
 
@@ -357,7 +357,7 @@ def test_execute_user_trades_at_hour_leaves_trades_active_when_the_market_is_clo
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
         container.market_data,
-        "get_prices",
+        "get_prices_for_hour",
         lambda hour: MarketState(hour=HOUR, prices={}, market_open=False),
     )
 
@@ -382,7 +382,7 @@ def test_execute_user_trades_at_hour_fills_a_value_based_market_buy_at_the_open_
     ).submitted_ids[0]
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
     )
 
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
@@ -405,7 +405,7 @@ def test_execute_user_trades_at_hour_fills_a_value_based_market_sell_at_the_open
     _submit(user_id, "market_buy", quantity=10)
     _set_last_hourly_update(user_id, HOUR_BEFORE)
     monkeypatch.setattr(
-        container.market_data, "get_prices", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
+        container.market_data, "get_prices_for_hour", lambda hour: _fake_prices("AAPL", 185.0, 195.0, open=190.0)
     )
     container.trade_execution.execute_user_trades_at_hour(user_id, HOUR)
 

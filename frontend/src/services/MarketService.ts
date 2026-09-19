@@ -1,5 +1,5 @@
 import { apiGet } from "../api/client";
-import type { PricesResponseDto } from "../api/dto";
+import type { MarketStateResponseDto } from "../api/dto";
 import { mapPricesToQuotes } from "../api/mappers";
 import { TIMEFRAMES, candlesFor } from "../mock/data";
 import type { Candle, PriceChange, SymbolQuote, Timeframe } from "../types";
@@ -10,8 +10,9 @@ import type { Candle, PriceChange, SymbolQuote, Timeframe } from "../types";
 export class MarketService {
   /** Current hourly quotes for every tradable symbol. */
   async getQuotes(): Promise<SymbolQuote[]> {
-    const dto = await apiGet<PricesResponseDto>("/market/prices");
-    return mapPricesToQuotes(dto);
+    const states = await apiGet<MarketStateResponseDto[]>("/market/prices");
+    const latest = states[states.length - 1];
+    return mapPricesToQuotes(latest);
   }
 
   /** Timeframe options for the quote-detail chart. */
@@ -22,9 +23,9 @@ export class MarketService {
   /**
    * Candle series for the selected timeframe.
    *
-   * TODO: `/market/prices` has no historical variant yet (see
-   * `app/routers/market.py`) - return real candles once it exists; the
-   * current data comes from the seeded generators in `mock/data.ts`.
+   * TODO: `/market/prices` now supports historical ranges (start/end/range
+   * params), but the UI still uses the seeded generators in `mock/data.ts`
+   * - switch to real data (aggregating hourly states into candles) later.
    */
   async getCandles(quote: SymbolQuote, timeframe: Timeframe): Promise<Candle[]> {
     const spec =
@@ -35,10 +36,9 @@ export class MarketService {
   /**
    * Daily change for a quote (first open → last close of the 1-day series).
    *
-   * TODO: the API exposes no daily-change data (see `app/routers/market.py`)
-   * - use real daily bars once they exist; the current series comes from
-   * the seeded generators in `mock/data.ts`, the same source the quote
-   * chart uses.
+   * TODO: could be computed from `/market/prices` (range=day) - the current
+   * series comes from the seeded generators in `mock/data.ts`, the same
+   * source the quote chart uses.
    */
   dailyChange(quote: SymbolQuote): PriceChange {
     const daySpec =

@@ -7,7 +7,7 @@ from typing import override
 from pydantic.dataclasses import dataclass
 
 
-@dataclass(order=True)
+@dataclass(order=True, frozen=True)
 class HourlyDate:
     day: date
     hour: int
@@ -41,19 +41,25 @@ class HourlyDate:
 
     @staticmethod
     def next(hour: HourlyDate) -> HourlyDate:
-        return HourlyDate.containing(hour.timestamp() + timedelta(hours=1))
+        return hour + timedelta(hours=1)
 
     @staticmethod
     def enumerate_range(start: HourlyDate, end: HourlyDate) -> Iterable[HourlyDate]:
-        """Yields each HourlyDate in the range [start, end), starting from `start` and incrementing by hour."""
+        """Yields each HourlyDate in the range [start, end], i.e. both ends inclusive."""
         current = start
-        while current < end:
+        while current <= end:
             yield current
             current = HourlyDate.next(current)
 
     @override
     def __str__(self) -> str:
         return f"{self.hour:02}:00 {self.day.isoformat()}"
+
+    def __add__(self, other: timedelta) -> HourlyDate:
+        return HourlyDate.containing(self.timestamp() + other)
+
+    def __sub__(self, other: timedelta) -> HourlyDate:
+        return HourlyDate.containing(self.timestamp() - other)
 
     @staticmethod
     def _alpaca_latency() -> timedelta:

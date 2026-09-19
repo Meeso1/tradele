@@ -25,8 +25,8 @@ import type {
   HourlyDateDto,
   HourlyPriceDataDto,
   InactiveTradeStatusDto,
+  MarketStateResponseDto,
   PortfolioResponseDto,
-  PricesResponseDto,
   TradeInputDto,
   TradeKindDto,
 } from "./dto";
@@ -36,7 +36,7 @@ import type {
 /* -------------------------------------------------------------------------- */
 
 /** Quotes sorted by symbol; change is the hourly open→close move. */
-export function mapPricesToQuotes(dto: PricesResponseDto): SymbolQuote[] {
+export function mapPricesToQuotes(dto: MarketStateResponseDto): SymbolQuote[] {
   return Object.values(dto.prices)
     .map(mapHourlyPriceToQuote)
     .sort((first, second) => first.symbol.localeCompare(second.symbol));
@@ -61,7 +61,7 @@ export interface PortfolioOverview {
 
 export function mapPortfolioOverview(
   portfolio: PortfolioResponseDto,
-  prices: PricesResponseDto,
+  prices: MarketStateResponseDto,
 ): PortfolioOverview {
   const lastPriceBySymbol = new Map(
     Object.values(prices.prices).map((price) => [price.symbol, price.close]),

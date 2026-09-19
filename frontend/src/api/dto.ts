@@ -19,7 +19,8 @@ export interface HourlyPriceDataDto {
   starting_hour: HourlyDateDto;
 }
 
-export interface PricesResponseDto {
+export interface MarketStateResponseDto {
+  hour: HourlyDateDto;
   prices: Record<string, HourlyPriceDataDto>;
   market_open: boolean;
 }
@@ -27,6 +28,14 @@ export interface PricesResponseDto {
 export interface PortfolioResponseDto {
   cash: number;
   holdings: Record<string, number>;
+}
+
+export interface PortfolioStateResponseDto {
+  cash: number;
+  holdings: Record<string, number>;
+  timestamp: HourlyDateDto;
+  total_value: number;
+  recorded_at: string;
 }
 
 export type TradeKindDto =
