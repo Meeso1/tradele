@@ -10,6 +10,9 @@ export interface HourlyDateDto {
   hour: number;
 }
 
+/** Backend `PriceHistoryRange` enum (convenience ranges for `/market/prices`). */
+export type PriceHistoryRangeDto = "current_hour" | "day" | "week" | "month" | "year";
+
 export interface HourlyPriceDataDto {
   symbol: string;
   open: number;

@@ -15,6 +15,7 @@ import { useAsync } from "../hooks/useAsync";
 import { useDailyChanges } from "../hooks/useDailyChanges";
 import { usePortfolioOverview } from "../hooks/usePortfolioOverview";
 import { useQuotes } from "../hooks/useQuotes";
+import { useTimeframePrefetch } from "../hooks/useTimeframePrefetch";
 import { useTrades } from "../hooks/useTrades";
 import { tradesService } from "../services/TradesService";
 import type { NewOrder, OpenOrderState, Tab } from "../types";
@@ -112,10 +113,11 @@ function useOrderBook(symbol: string, onSelectSymbol: (symbol: string) => void) 
 }
 
 export function MarketScreen({ onTabChange }: MarketScreenProps) {
+  useTimeframePrefetch();
   const quotes = useQuotes();
   const overview = usePortfolioOverview();
   const quoteList = quotes.data ?? [];
-  const dailyChanges = useDailyChanges(quoteList);
+  const dailyChanges = useDailyChanges();
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const quote =
     quoteList.find((candidate) => candidate.symbol === selectedSymbol) ?? quoteList[0] ?? null;
@@ -132,7 +134,7 @@ export function MarketScreen({ onTabChange }: MarketScreenProps) {
       <div className={styles.content}>
         <TickerStrip
           quotes={quoteList}
-          changes={dailyChanges}
+          changes={dailyChanges.data ?? {}}
           selectedSymbol={quote?.symbol ?? ""}
           onSelect={setSelectedSymbol}
         />
@@ -140,6 +142,11 @@ export function MarketScreen({ onTabChange }: MarketScreenProps) {
           <div className={styles.primary}>
             {quote != null ? (
               <QuoteDetail quote={quote} />
+            ) : quotes.data != null && quotes.data.length === 0 ? (
+              <StatusNote
+                tone="empty"
+                message="No price data available — the market may be closed"
+              />
             ) : (
               <StatusNote
                 tone={quotes.error == null ? "loading" : "error"}

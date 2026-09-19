@@ -42,7 +42,6 @@ export interface Timeframe {
   readonly label: string;
   /** Candle interval shown under the label. */
   readonly interval: string;
-  readonly points: number;
 }
 
 /** Change over a period: absolute and percent. */

@@ -5,6 +5,7 @@
  */
 
 import type {
+  Candle,
   HistoryDay,
   HistoryOrder,
   Holding,
@@ -16,6 +17,7 @@ import type {
   OrderSide,
   OrderStatus,
   OrderType,
+  PriceChange,
   SymbolQuote,
 } from "../types";
 import { formatDayLabel, formatShares, formatWholeUsd } from "../utils/format";
@@ -27,6 +29,7 @@ import type {
   InactiveTradeStatusDto,
   MarketStateResponseDto,
   PortfolioResponseDto,
+  PortfolioStateResponseDto,
   TradeInputDto,
   TradeKindDto,
 } from "./dto";
@@ -48,6 +51,70 @@ function mapHourlyPriceToQuote(dto: HourlyPriceDataDto): SymbolQuote {
   return { symbol: dto.symbol, price: dto.close, changeAbs, changePct };
 }
 
+/**
+ * Aggregate a contiguous run of hourly market states into candles for one
+ * symbol: every `bucketHours` states form one candle (open of the first
+ * priced hour, close of the last, extremes across the bucket). Hours with no
+ * price for the symbol (market closed) are skipped, as are buckets with no
+ * priced hours at all.
+ */
+export function mapStatesToCandles(
+  states: readonly MarketStateResponseDto[],
+  symbol: string,
+  bucketHours: number,
+): Candle[] {
+  const candles: Candle[] = [];
+  for (let start = 0; start < states.length; start += bucketHours) {
+    const priced = states
+      .slice(start, start + bucketHours)
+      .map((state) => state.prices[symbol])
+      .filter((price) => price != null);
+    if (priced.length === 0) continue;
+    candles.push({
+      open: priced[0].open,
+      close: priced[priced.length - 1].close,
+      high: Math.max(...priced.map((price) => price.high)),
+      low: Math.min(...priced.map((price) => price.low)),
+    });
+  }
+  return candles;
+}
+
+/** Daily (first open → last close) change per symbol over the most recent
+ * trading day in the given states - the latest calendar day that has any
+ * prices (on weekends/holidays that's the last session; before market open
+ * it's the previous day). */
+export function mapStatesToDailyChanges(
+  states: readonly MarketStateResponseDto[],
+): Record<string, PriceChange> {
+  const opensByDay = new Map<string, Map<string, number>>();
+  const closesByDay = new Map<string, Map<string, number>>();
+  for (const state of states) {
+    for (const price of Object.values(state.prices)) {
+      const opens = opensByDay.get(state.hour.day) ?? new Map<string, number>();
+      const closes = closesByDay.get(state.hour.day) ?? new Map<string, number>();
+      if (!opens.has(price.symbol)) opens.set(price.symbol, price.open);
+      closes.set(price.symbol, price.close);
+      opensByDay.set(state.hour.day, opens);
+      closesByDay.set(state.hour.day, closes);
+    }
+  }
+  // ISO day keys sort chronologically.
+  const dayKeys = [...opensByDay.keys()].sort();
+  const latestDay = dayKeys[dayKeys.length - 1];
+  const opens = latestDay != null ? opensByDay.get(latestDay) : undefined;
+  const closes = latestDay != null ? closesByDay.get(latestDay) : undefined;
+  if (latestDay == null || opens == null || closes == null) return {};
+
+  const changes: Record<string, PriceChange> = {};
+  for (const [symbol, open] of opens) {
+    const close = closes.get(symbol) ?? open;
+    const abs = close - open;
+    changes[symbol] = { abs, pct: open !== 0 ? (abs / open) * 100 : 0 };
+  }
+  return changes;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Portfolio                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -61,15 +128,12 @@ export interface PortfolioOverview {
 
 export function mapPortfolioOverview(
   portfolio: PortfolioResponseDto,
-  prices: MarketStateResponseDto,
+  lastPrices: Record<string, number>,
 ): PortfolioOverview {
-  const lastPriceBySymbol = new Map(
-    Object.values(prices.prices).map((price) => [price.symbol, price.close]),
-  );
   const holdings: Holding[] = Object.entries(portfolio.holdings).map(([symbol, shares]) => ({
     symbol,
     shares,
-    lastPrice: lastPriceBySymbol.get(symbol) ?? 0,
+    lastPrice: lastPrices[symbol] ?? 0,
   }));
   holdings.sort((first, second) => first.symbol.localeCompare(second.symbol));
   const holdingsValue = holdings.reduce(
@@ -77,6 +141,22 @@ export function mapPortfolioOverview(
     0,
   );
   return { cash: portfolio.cash, holdings, value: portfolio.cash + holdingsValue };
+}
+
+/**
+ * Portfolio-value series from the recorded hourly states, with the live
+ * value appended so the chart ends at the hero value. Padded to two points
+ * when there's no history yet (e.g. a brand-new player), so the chart has a
+ * line to draw.
+ */
+export function mapPortfolioHistoryToSeries(
+  states: readonly PortfolioStateResponseDto[],
+  currentValue: number,
+): number[] {
+  const series = states.map((state) => state.total_value);
+  series.push(currentValue);
+  if (series.length < 2) series.unshift(series[0]);
+  return series;
 }
 
 /* -------------------------------------------------------------------------- */
