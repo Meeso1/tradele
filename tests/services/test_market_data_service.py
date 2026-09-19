@@ -20,7 +20,7 @@ def test_get_prices_returns_a_price_for_every_symbol_with_bars(monkeypatch: pyte
     }
     monkeypatch.setattr(container.alpaca_client, "get_hourly_bars", lambda symbols, start, end: bars)
 
-    market_state = container.market_data.get_prices(HOUR)
+    market_state = container.market_data.get_prices_for_hour(HOUR)
 
     assert set(market_state.prices.keys()) == {"AAPL", "MSFT"}
     assert all(price_data.close > 0 for price_data in market_state.prices.values())
@@ -36,7 +36,7 @@ def test_get_prices_omits_symbols_with_no_bars(monkeypatch: pytest.MonkeyPatch):
     }
     monkeypatch.setattr(container.alpaca_client, "get_hourly_bars", lambda symbols, start, end: bars)
 
-    market_state = container.market_data.get_prices(HOUR)
+    market_state = container.market_data.get_prices_for_hour(HOUR)
 
     assert set(market_state.prices.keys()) == {"AAPL"}
 
@@ -53,7 +53,7 @@ def test_get_prices_queries_the_alpaca_client_for_the_hour_window(monkeypatch: p
 
     monkeypatch.setattr(container.alpaca_client, "get_hourly_bars", _get_hourly_bars)
 
-    container.market_data.get_prices(HOUR)
+    container.market_data.get_prices_for_hour(HOUR)
 
     assert captured["symbols"] == ["AAPL"]
     assert captured["start"] == HOUR
@@ -79,8 +79,8 @@ def test_get_prices_uses_the_cache_instead_of_refetching_an_already_fetched_hour
 
     monkeypatch.setattr(container.alpaca_client, "get_hourly_bars", _get_hourly_bars)
 
-    first = container.market_data.get_prices(HOUR)
-    second = container.market_data.get_prices(HOUR)
+    first = container.market_data.get_prices_for_hour(HOUR)
+    second = container.market_data.get_prices_for_hour(HOUR)
 
     assert call_count == 1
     assert set(first.prices.keys()) == {"AAPL"}
@@ -89,7 +89,7 @@ def test_get_prices_uses_the_cache_instead_of_refetching_an_already_fetched_hour
 
 def test_get_prices_only_fetches_symbols_missing_from_the_cache(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(container.settings, "tradable_symbols", ["AAPL", "MSFT"])
-    container.market_data_repository.cache_all(
+    container.market_data_repository.cache_hour(
         HOUR,
         {
             "AAPL": HourlyPriceData(
@@ -111,7 +111,7 @@ def test_get_prices_only_fetches_symbols_missing_from_the_cache(monkeypatch: pyt
 
     monkeypatch.setattr(container.alpaca_client, "get_hourly_bars", _get_hourly_bars)
 
-    market_state = container.market_data.get_prices(HOUR)
+    market_state = container.market_data.get_prices_for_hour(HOUR)
 
     assert captured["symbols"] == ["MSFT"]
     assert set(market_state.prices.keys()) == {"AAPL", "MSFT"}

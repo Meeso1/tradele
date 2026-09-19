@@ -17,7 +17,7 @@ def get_symbols(settings: SettingsServiceDep) -> list[str]:
 @router.get("/prices", response_model=PricesResponse)
 def get_prices(market_data_service: MarketDataServiceDep) -> PricesResponse:
     """Return current (hourly) prices for every tradable symbol."""
-    market_state = market_data_service.get_prices(HourlyDate.last_passed_hour())
+    market_state = market_data_service.get_prices_for_hour(HourlyDate.last_passed_hour())
     return PricesResponse(prices=market_state.prices, market_open=market_state.market_open)
 
 # TODO: Some historical prices endpoint for plots etc.

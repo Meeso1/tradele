@@ -41,7 +41,7 @@ class HourlyDate:
 
     @staticmethod
     def next(hour: HourlyDate) -> HourlyDate:
-        return HourlyDate.containing(hour.timestamp() + timedelta(hours=1))
+        return hour + timedelta(hours=1)
 
     @staticmethod
     def enumerate_range(start: HourlyDate, end: HourlyDate) -> Iterable[HourlyDate]:
@@ -54,6 +54,12 @@ class HourlyDate:
     @override
     def __str__(self) -> str:
         return f"{self.hour:02}:00 {self.day.isoformat()}"
+
+    def __add__(self, other: timedelta) -> HourlyDate:
+        return HourlyDate.containing(self.timestamp() + other)
+
+    def __sub__(self, other: timedelta) -> HourlyDate:
+        return HourlyDate.containing(self.timestamp() - other)    
 
     @staticmethod
     def _alpaca_latency() -> timedelta:

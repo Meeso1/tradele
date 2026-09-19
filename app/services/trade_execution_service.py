@@ -92,7 +92,7 @@ class TradeExecutionService:
             self._logger.info("Skipping trades update for hour %s for user %s - portfolio was updated up %s", hour, user_id, portfolio.last_hourly_update)
             return
 
-        pricing_data = self._market_data_service.get_prices(hour)
+        pricing_data = self._market_data_service.get_prices_for_hour(hour)
         if not pricing_data.market_open:
             self._logger.info("Skipping trades update for hour %s for user %s - market is closed", hour, user_id)
             return

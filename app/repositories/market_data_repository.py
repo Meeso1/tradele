@@ -48,7 +48,7 @@ class MarketDataRepository:
             ).fetchall()
         return {row["symbol"]: self._price_data_from_row(row, hour) for row in rows}
 
-    def cache_all(self, hour: HourlyDate, prices: dict[str, HourlyPriceData | None]) -> None:
+    def cache_hour(self, hour: HourlyDate, prices: dict[str, HourlyPriceData | None]) -> None:
         """Persist the full result of one Alpaca request for `hour`.
 
         `prices` should map every symbol that was requested from Alpaca to
@@ -86,6 +86,10 @@ class MarketDataRepository:
                     for symbol, price_data in prices.items()
                 ],
             )
+
+    def cache_all(self, prices: dict[HourlyDate, dict[str, HourlyPriceData | None]]) -> None:
+        # TODO(cleanup): persist multiple hours. Probably could be done in a single SQL call? IDK if that's the best idea, though. There could be a lot of data here.
+        ...
 
     @staticmethod
     def _price_data_from_row(row: sqlite3.Row, hour: HourlyDate) -> HourlyPriceData | None:
