@@ -1,0 +1,33 @@
+app = "tradele"
+primary_region = "ams"
+
+[env]
+  # Persistent state lives on the tradele_data volume (see [[mounts]]).
+  TRADELE_DB_PATH = "/data/tradele.db"
+  TRADELE_KEYS_DIR = "/data/keys"
+  TRADELE_RUN_SCHEDULED_JOBS = "false"
+  # TODO: allow skipping writing logs to disk via config
+
+[[mounts]]
+  # One volume can only attach to one machine, which is also what pins the
+  # app to a single instance - required while the DB is SQLite.
+  source = "tradele_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "get"
+    timeout = "5s"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
