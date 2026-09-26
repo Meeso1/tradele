@@ -35,15 +35,17 @@ def test_create_key_records_creating_key():
     assert api_key.created_by_key == "parent-key"
 
 
-def test_create_key_with_configured_hash_generates_no_secret():
+def test_create_predefined_key_uses_configured_id_and_hash():
     user_id = container.users.create()
     key_hash = hashlib.sha256(b"operator-chosen-secret").hexdigest()
 
-    api_key, secret = container.api_keys.create_key(user_id, "test key", key_hash=key_hash)
+    api_key = container.api_keys.create_predefined_key(
+        user_id, "test key", key_id="key_operator-chosen", key_hash=key_hash
+    )
 
-    assert secret is None
+    assert api_key.id == "key_operator-chosen"
     assert api_key.key_hash == key_hash
-    assert container.api_keys.authenticate(api_key.id, "operator-chosen-secret") is not None
+    assert container.api_keys.authenticate("key_operator-chosen", "operator-chosen-secret") is not None
 
 
 def test_format_authorization_header_roundtrips():
@@ -53,10 +55,11 @@ def test_format_authorization_header_roundtrips():
     assert container.api_keys.authenticate("some key id", "some:secret") is None  # unknown key
     # But the header decodes back to the exact arbitrary-string parts.
     import base64
+    from urllib import parse
 
     username, _, password = base64.b64decode(header[len("Basic ") :]).decode().partition(":")
-    assert base64.b64decode(username).decode() == "some key id"
-    assert base64.b64decode(password).decode() == "some:secret"
+    assert parse.unquote(username) == "some key id"
+    assert parse.unquote(password) == "some:secret"
 
 
 def test_authenticate_rejects_wrong_secret():

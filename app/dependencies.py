@@ -7,8 +7,8 @@ than importing `container` directly), so tests can override them with
 
 from __future__ import annotations
 
-import base64
 from typing import Annotated
+from urllib import parse
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import (
@@ -22,6 +22,7 @@ from app.auth_context import SCOPE_SERVICE_ACCESS, AuthContext
 from app.container import container
 from app.jobs.job_scheduler import JobScheduler
 from app.repositories.trade_repository import TradeRepository
+from app.repositories.tutorial_repository import TutorialRepository
 from app.services.api_key_service import ApiKeyService
 from app.services.auth_service import AuthService
 from app.services.authentication_service import (
@@ -49,8 +50,9 @@ def get_auth_context(
     key) and expose the resulting identity, auth method, scopes and key
     metadata to routes.
 
-    API keys use HTTP Basic auth where the username is `base64(key_id)` and
-    the password is `base64(secret)`.
+    API keys use HTTP Basic auth where the username is the URL-encoded key
+    ID and the password is the URL-encoded secret (the pair itself is
+    base64-encoded as required by the Basic scheme).
 
     Routes that need to know who's calling should depend on
     `AuthContextDep` instead of accepting a `user_id` from the client
@@ -63,10 +65,8 @@ def get_auth_context(
                 bearer_credentials.credentials
             )
         if basic_credentials is not None:
-            parts = _decode_api_key_parts(basic_credentials)
-            if parts is None:
-                raise UnauthorizedError("Malformed API key credentials")
-            return container.authentication.authenticate_api_key(*parts)
+            key_id, secret = _decode_api_key_parts(basic_credentials)
+            return container.authentication.authenticate_api_key(key_id, secret)
         raise UnauthorizedError("Missing credentials")
     except UnauthorizedError as error:
         raise HTTPException(
@@ -81,14 +81,12 @@ def get_auth_context(
 
 def _decode_api_key_parts(
     credentials: HTTPBasicCredentials,
-) -> tuple[str, str] | None:
+) -> tuple[str, str]:
     """Decode API key Basic credentials of the form
-    `base64(key_id):base64(secret)`, returning arbitrary-string parts."""
-    try:
-        key_id = base64.b64decode(credentials.username, validate=True).decode()
-        secret = base64.b64decode(credentials.password, validate=True).decode()
-    except ValueError:  # malformed base64 or non-UTF-8 data
-        return None
+    `base64(urlencode(key_id)):base64(urlencode(secret))`, returning the
+    arbitrary-string parts."""
+    key_id = parse.unquote(credentials.username)
+    secret = parse.unquote(credentials.password)
     return key_id, secret
 
 
@@ -112,6 +110,10 @@ def require_service_access(auth_context: AuthContextDep) -> AuthContext:
 
 def get_trade_repository() -> TradeRepository:
     return container.trade_repository
+
+
+def get_tutorial_repository() -> TutorialRepository:
+    return container.tutorial_repository
 
 
 def get_user_service() -> UserService:
@@ -151,6 +153,8 @@ def get_job_scheduler() -> JobScheduler:
 
 
 TradeRepositoryDep = Annotated[TradeRepository, Depends(get_trade_repository)]
+
+TutorialRepositoryDep = Annotated[TutorialRepository, Depends(get_tutorial_repository)]
 
 AuthContextDep = Annotated[AuthContext, Depends(get_auth_context)]
 ServiceAccessDep = Annotated[AuthContext, Depends(require_service_access)]

@@ -2,6 +2,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import base64
+from urllib import parse
 
 import pytest
 
@@ -64,6 +65,6 @@ def decode_basic_authorization() -> Callable[[str], tuple[str, str]]:
         username, _, password = base64.b64decode(authorization[len("Basic ") :]).decode().partition(
             ":"
         )
-        return base64.b64decode(username).decode(), base64.b64decode(password).decode()
+        return parse.unquote(username), parse.unquote(password)
 
     return _decode

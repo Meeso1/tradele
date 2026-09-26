@@ -16,14 +16,16 @@ class ServiceAccountCreator:
     """Ensures the service account and an active API key for it exist at
     startup.
 
-    Keys are never predefined: if the service account has no active key, a
-    new one is created, either with the hash configured via
+    If the service account has no active key, a new one is created, either
+    with the ID and hash configured via `TRADELE_SERVICE_API_KEY_ID` and
     `TRADELE_SERVICE_API_KEY_HASH` (the key value is then only known to
-    whoever configured it) or with a generated value that is printed to the
-    console - shown only once. Keys are named after a predefined name plus
-    the creation time, so keys from multiple bootstrap runs (which
-    shouldn't happen) stay distinguishable. Existing keys are never
-    modified or reprinted.
+    whoever configured them) or with a generated ID and value that is
+    printed to the console - shown only once. If only one of the two
+    variables is set, it is ignored (with an error logged) and a key is
+    generated instead. Keys are named after a predefined name plus the
+    creation time, so keys from multiple bootstrap runs (which shouldn't
+    happen) stay distinguishable. Existing keys are never modified or
+    reprinted.
     """
 
     def __init__(
@@ -59,22 +61,40 @@ class ServiceAccountCreator:
             return None
 
         name = self._service_account_key_name()
-        api_key, secret = self._api_key_service.create_key(
-            UserService.SERVICE_ACCOUNT_ID,
-            name,
-            key_hash=self._settings.service_api_key_hash or None,
-        )
-        if secret is None:
+
+        key_id = self._settings.service_api_key_id
+        key_hash = self._settings.service_api_key_hash
+
+        if key_id != "" and key_hash != "":
+            api_key = self._api_key_service.create_predefined_key(
+                UserService.SERVICE_ACCOUNT_ID,
+                name,
+                key_id=key_id,
+                key_hash=key_hash,
+            )
             self._logger.info(
-                "Created service account API key %s (%s) from TRADELE_SERVICE_API_KEY_HASH",
+                "Created service account API key %s (%s) from configuration",
                 api_key.id,
                 name,
             )
             return None
 
+        if key_id != "" or key_hash != "":
+            present, missing = (
+                ("TRADELE_SERVICE_API_KEY_ID", "TRADELE_SERVICE_API_KEY_HASH")
+                if key_id != ""
+                else ("TRADELE_SERVICE_API_KEY_HASH", "TRADELE_SERVICE_API_KEY_ID")
+            )
+            self._logger.error(
+                "%s is set but %s is not; service account API key will be generated, ignoring these values",
+                present,
+                missing,
+            )
+
+        api_key, secret = self._api_key_service.create_key(UserService.SERVICE_ACCOUNT_ID, name)
         authorization = self._api_key_service.format_authorization_header(api_key.id, secret)
         self._logger.warning(
-            "Generated service account API key %s (%s), shown once - store it securely and use it as the `Authorization` header value: %s",
+            "Generated service account API key %s (%s) - store it securely and use it as the `Authorization` header value: %s",
             api_key.id,
             name,
             authorization,

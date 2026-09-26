@@ -26,8 +26,9 @@ def test_ensure_creates_account_and_key(decode_basic_authorization):
     assert container.service_account_creator.ensure_exists() is None
 
 
-def test_ensure_uses_configured_hash(monkeypatch: pytest.MonkeyPatch):
+def test_ensure_uses_configured_id_and_hash(monkeypatch: pytest.MonkeyPatch):
     secret = "operator-chosen-secret"
+    monkeypatch.setenv("TRADELE_SERVICE_API_KEY_ID", "key_operator-chosen")
     monkeypatch.setenv(
         "TRADELE_SERVICE_API_KEY_HASH", hashlib.sha256(secret.encode()).hexdigest()
     )
@@ -38,15 +39,31 @@ def test_ensure_uses_configured_hash(monkeypatch: pytest.MonkeyPatch):
     assert authorization is None
     keys = container.api_keys.list_keys(UserService.SERVICE_ACCOUNT_ID)
     assert len(keys) == 1
+    assert keys[0].id == "key_operator-chosen"
     authenticated = container.api_keys.authenticate(keys[0].id, secret)
     assert authenticated is not None
     assert authenticated.user_id == UserService.SERVICE_ACCOUNT_ID
+
+
+def test_ensure_generates_a_key_when_only_one_variable_is_set(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("TRADELE_SERVICE_API_KEY_ID", "key_operator-chosen")
+    container.reset()
+
+    authorization = container.service_account_creator.ensure_exists()
+
+    # The half-configured values are ignored and a key is generated instead.
+    assert authorization is not None
+    keys = container.api_keys.list_keys(UserService.SERVICE_ACCOUNT_ID)
+    assert len(keys) == 1
+    assert keys[0].id != "key_operator-chosen"
+    assert keys[0].id.startswith("key_")
 
 
 def test_ensure_does_not_modify_an_existing_key(monkeypatch: pytest.MonkeyPatch):
     container.service_account_creator.ensure_exists()
     original = container.api_keys.list_keys(UserService.SERVICE_ACCOUNT_ID)[0]
 
+    monkeypatch.setenv("TRADELE_SERVICE_API_KEY_ID", "key_never-used")
     monkeypatch.setenv("TRADELE_SERVICE_API_KEY_HASH", hashlib.sha256(b"never-used").hexdigest())
     container.reset()
     assert container.service_account_creator.ensure_exists() is None

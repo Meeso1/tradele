@@ -42,8 +42,9 @@ class SettingsService:
             "ALPACA_DATA_BASE_URL", "https://data.alpaca.markets"
         )
 
-        # SHA-256 hex digest of the secret part of the service account's API
-        # key, used to create the key on first startup
+        # ID and SHA-256 hex digest of the secret part of the service account's API key,
+        # used to create the key on first startup
+        self.service_api_key_id: str = os.environ.get("TRADELE_SERVICE_API_KEY_ID", "")
         self.service_api_key_hash: str = os.environ.get("TRADELE_SERVICE_API_KEY_HASH", "")
 
         # If false, scheduled jobs are not run on a background schedule;

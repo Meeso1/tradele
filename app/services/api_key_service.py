@@ -1,13 +1,13 @@
 """Creation, verification and lifecycle management of API keys.
 
 API keys are presented by clients via HTTP Basic auth, in the form
-`Authorization: Basic base64(base64(key_id) + ":" + base64(secret))` - the
-Basic username is `base64(key_id)` and the password is `base64(secret)`, so
-any characters can appear in either part. The key ID is looked up in the
-database and the secret is verified by SHA-256 hash equality (key values
-themselves are never stored). Key IDs and secrets are treated as arbitrary
-strings - the `key_`/`secret_` prefixes used when generating them are purely
-cosmetic.
+`Authorization: Basic base64(quote(key_id) + ":" + quote(secret))` - the
+Basic username is the URL-encoded key ID and the password is the
+URL-encoded secret, so any characters can appear in either part. The key
+ID is looked up in the database and the secret is verified by SHA-256
+hash equality (key values themselves are never stored). Key IDs and
+secrets are treated as arbitrary strings - the `key_`/`secret_` prefixes
+used when generating them are purely cosmetic.
 
 Keys are never deleted, only deactivated, and a key can never be used to
 deactivate itself (so the authenticating key always remains active). The
@@ -23,6 +23,7 @@ import logging
 import secrets
 import uuid
 from datetime import UTC, datetime
+from urllib import parse
 
 from app.models.api_key import ApiKey
 from app.repositories.api_key_repository import ApiKeyRepository
@@ -68,8 +69,8 @@ class ApiKeyService:
     @staticmethod
     def format_authorization_header(key_id: str, secret: str) -> str:
         """Build the `Authorization` header value that presents this key."""
-        username = base64.b64encode(key_id.encode()).decode()
-        password = base64.b64encode(secret.encode()).decode()
+        username = parse.quote(key_id)
+        password = parse.quote(secret)
         blob = base64.b64encode(f"{username}:{password}".encode()).decode()
         return f"Basic {blob}"
 
@@ -78,23 +79,15 @@ class ApiKeyService:
         user_id: str,
         name: str,
         *,
-        key_hash: str | None = None,
         created_by_key: str | None = None,
-    ) -> tuple[ApiKey, str | None]:
+    ) -> tuple[ApiKey, str]:
         """Create an active API key and return it alongside its secret.
 
-        `key_hash` can be overridden when bootstrapping the service
-        account's key from an operator-configured hash. When given, no
-        secret is generated and None is returned instead - the value is
-        only known to whoever configured the hash. Otherwise, the secret
-        is not recoverable after this call - callers must return it to the
-        user immediately.
+        The secret is not recoverable after this call - callers must
+        return it to the user immediately.
         """
-        if key_hash is None:
-            secret = self.generate_secret()
-            key_hash = self._hash_secret(secret)
-        else:
-            secret = None
+        secret = self.generate_secret()
+        key_hash = self._hash_secret(secret)
 
         api_key = ApiKey(
             id=self.generate_key_id(),
@@ -108,6 +101,31 @@ class ApiKeyService:
         self._repository.insert(api_key)
         self._logger.info("Created API key %s for user %s", api_key.id, user_id)
         return api_key, secret
+
+    def create_predefined_key(
+        self,
+        user_id: str,
+        name: str,
+        *,
+        key_id: str,
+        key_hash: str,
+    ) -> ApiKey:
+        """Create an active API key with a predefined ID and hash, used for
+        bootstrapping the service account's key from operator-configured
+        values.
+        """
+        api_key = ApiKey(
+            id=key_id,
+            user_id=user_id,
+            name=name,
+            key_hash=key_hash,
+            created_by_key=None,
+            created_at=datetime.now(UTC),
+            deactivated_at=None,
+        )
+        self._repository.insert(api_key)
+        self._logger.info("Created API key %s for user %s", api_key.id, user_id)
+        return api_key
 
     def get_key(self, key_id: str) -> ApiKey | None:
         """Return a key by ID, regardless of its status."""

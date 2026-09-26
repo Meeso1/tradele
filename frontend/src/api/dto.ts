@@ -117,6 +117,7 @@ export interface SubmitTradesResponseDto {
 export interface MetadataResponseDto {
   day_number: number;
   seconds_until_day_end: number;
+  has_completed_tutorial: boolean;
 }
 
 export interface CreateUserResponseDto {

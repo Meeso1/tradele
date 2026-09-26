@@ -14,6 +14,7 @@ from app.repositories.api_key_repository import ApiKeyRepository
 from app.repositories.market_data_repository import MarketDataRepository
 from app.repositories.portfolio_repository import PortfolioRepository
 from app.repositories.trade_repository import TradeRepository
+from app.repositories.tutorial_repository import TutorialRepository
 from app.repositories.user_repository import UserRepository
 from app.services.alpaca_market_data_client import AlpacaMarketDataClient
 from app.services.api_key_service import ApiKeyService
@@ -53,6 +54,9 @@ class Container:
         )
         self.market_data_repository: MarketDataRepository = MarketDataRepository(
             self.database, self.logger.get_logger("MarketDataRepository")
+        )
+        self.tutorial_repository: TutorialRepository = TutorialRepository(
+            self.database, self.logger.get_logger("TutorialRepository")
         )
 
         self.users: UserService = UserService(
@@ -129,6 +133,7 @@ class Container:
         self.trade_repository.configure(self.logger.get_logger("TradeRepository"))
         self.api_key_repository.configure(self.logger.get_logger("ApiKeyRepository"))
         self.market_data_repository.configure(self.logger.get_logger("MarketDataRepository"))
+        self.tutorial_repository.configure(self.logger.get_logger("TutorialRepository"))
 
         self.users.configure(self.logger.get_logger("UserService"))
         self.auth.configure(self.settings, self.logger.get_logger("AuthService"))

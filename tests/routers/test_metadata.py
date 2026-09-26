@@ -28,6 +28,7 @@ def test_get_metadata_returns_day_number_and_time_until_day_end(game_started_tod
     body = response.json()
     assert body["day_number"] == 0
     assert 0 <= body["seconds_until_day_end"] < 24 * 60 * 60
+    assert body["has_completed_tutorial"] is False
 
 
 def test_get_metadata_counts_days_since_the_first_day(monkeypatch: pytest.MonkeyPatch):
@@ -49,6 +50,44 @@ def test_get_metadata_requires_authentication():
     response = client.get("/api/metadata")
 
     assert response.status_code == 401
+
+
+def test_complete_tutorial_marks_tutorial_completed():
+    user_id = container.users.create()
+    headers = _headers(user_id)
+
+    response = client.post("/api/metadata/complete-tutorial", headers=headers)
+
+    assert response.status_code == 200
+    body = client.get("/api/metadata", headers=headers).json()
+    assert body["has_completed_tutorial"] is True
+
+
+def test_complete_tutorial_is_idempotent():
+    user_id = container.users.create()
+    headers = _headers(user_id)
+
+    for _ in range(2):
+        assert client.post("/api/metadata/complete-tutorial", headers=headers).status_code == 200
+
+    body = client.get("/api/metadata", headers=headers).json()
+    assert body["has_completed_tutorial"] is True
+
+
+def test_complete_tutorial_requires_authentication():
+    response = client.post("/api/metadata/complete-tutorial")
+
+    assert response.status_code == 401
+
+
+def test_tutorial_state_is_tracked_per_user():
+    first = container.users.create()
+    second = container.users.create()
+
+    client.post("/api/metadata/complete-tutorial", headers=_headers(first))
+
+    assert client.get("/api/metadata", headers=_headers(first)).json()["has_completed_tutorial"] is True
+    assert client.get("/api/metadata", headers=_headers(second)).json()["has_completed_tutorial"] is False
 
 
 def _headers(user_id: str) -> dict[str, str]:
