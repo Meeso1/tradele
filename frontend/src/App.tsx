@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { ensureSession } from "./api/client";
 import { StatusNote } from "./components/StatusNote";
+import { TutorialPopup } from "./components/TutorialPopup";
 import { MarketScreen } from "./screens/MarketScreen";
 import { PortfolioScreen } from "./screens/PortfolioScreen";
 import type { Tab } from "./types";
@@ -60,6 +61,7 @@ export default function App() {
       ) : (
         <PortfolioScreen onTabChange={setTab} />
       )}
+      <TutorialPopup />
     </div>
   );
 }

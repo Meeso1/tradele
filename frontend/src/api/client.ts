@@ -25,6 +25,9 @@ export class ApiError extends Error {
 
 let accessToken: string | null = localStorage.getItem(TOKEN_STORAGE_KEY);
 
+/** In-flight session bootstrap, shared by concurrent callers (single-flight). */
+let sessionBootstrap: Promise<void> | null = null;
+
 function storeAccessToken(token: string): void {
   accessToken = token;
   localStorage.setItem(TOKEN_STORAGE_KEY, token);
@@ -84,13 +87,23 @@ async function toApiError(response: Response): Promise<ApiError> {
 }
 
 /**
- * Ensure a usable session: reuse the stored access token, or (creating the
- * anonymous user first, if needed) mint a fresh one. Safe to call repeatedly;
- * every protected endpoint requires a token, so the app runs this at startup.
+ * Ensure a usable session: mint a fresh access token for the stored user
+ * (creating the anonymous user first if needed). Safe to call repeatedly;
+ * concurrent callers share one bootstrap.
+ *
+ * The stored token is never trusted across sessions: it may have expired
+ * (the app was closed for a while) or been signed with keys the server no
+ * longer has (fresh container), and minting is cheap - so every bootstrap
+ * mints a fresh token up front instead of waiting for a 401.
  */
 export async function ensureSession(): Promise<void> {
-  if (accessToken != null) return;
+  sessionBootstrap ??= bootstrapSession().finally(() => {
+    sessionBootstrap = null;
+  });
+  return sessionBootstrap;
+}
 
+async function bootstrapSession(): Promise<void> {
   const storedUserId = localStorage.getItem(USER_ID_STORAGE_KEY);
   if (storedUserId != null) {
     try {

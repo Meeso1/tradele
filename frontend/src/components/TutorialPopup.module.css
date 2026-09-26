@@ -1,0 +1,81 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 16, 8, 0.4);
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--paper2);
+  border-radius: 22px;
+  padding: 22px 20px 20px;
+  box-shadow: 0 12px 44px rgba(0, 0, 0, 0.24);
+}
+
+.title {
+  font: 500 22px/1.1 var(--font-serif);
+  margin-bottom: 8px;
+}
+
+.intro {
+  font: 14px/1.5 var(--font-ui);
+  color: var(--ink2);
+  margin: 0 0 14px;
+}
+
+.rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line2);
+}
+
+.rules li {
+  position: relative;
+  padding: 10px 0 10px 22px;
+  border-bottom: 1px solid var(--line2);
+  font: 13px/1.5 var(--font-ui);
+}
+
+.rules li::before {
+  content: "\2192";
+  position: absolute;
+  left: 2px;
+  font: 12px var(--font-mono);
+  color: var(--mut);
+}
+
+.soon {
+  margin: 14px 0 16px;
+  padding: 10px 12px;
+  background: var(--hl);
+  border: 1px solid var(--hl-line);
+  border-radius: 11px;
+  font: 12px/1.5 var(--font-ui);
+  color: var(--ink2);
+}
+
+.done {
+  width: 100%;
+  padding: 13px 22px;
+  border: none;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--paper);
+  font: 600 14px var(--font-ui);
+  cursor: pointer;
+}
